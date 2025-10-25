@@ -1,29 +1,29 @@
 import pygame
-import numpy as np
-import sys
-import random
-from pygame.locals import *
-from SocialForceModel import SocialForceModel
-from ParameterExperiment import ParameterExperiment
+from Config import CONFIG
+from Environment import Environment
 from Simulation import Simulation
+from Visualization import Visualization
 
-# Główna funkcja
 def main():
-    # Wybierz typ eksperymentu
-    experiment_type = "normal"  # Można zmienić na "dense", "wide_door", "panic"
-    
-    if experiment_type == "dense":
-        model = ParameterExperiment.create_dense_crowd()
-    elif experiment_type == "wide_door":
-        model = ParameterExperiment.create_wide_door()
-    elif experiment_type == "panic":
-        model = ParameterExperiment.create_panic_situation()
-    else:
-        model = SocialForceModel(num_agents=35, room_width=800, room_height=600, door_width=80)
-    
-    # Uruchom symulację
-    simulation = Simulation(model)
-    simulation.run()
+    pygame.init()
+    clock = pygame.time.Clock()
+
+    env = Environment(CONFIG)
+    sim = Simulation(env, CONFIG)
+    vis = Visualization(env)
+
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+        sim.update()
+        vis.draw()
+
+        clock.tick(30)  # FPS
+
+    pygame.quit()
 
 if __name__ == "__main__":
     main()
