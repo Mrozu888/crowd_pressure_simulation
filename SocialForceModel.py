@@ -1,33 +1,108 @@
 import numpy as np
 
 class SocialForceModel:
+    """
+    Implements the Social Force Model for pedestrian dynamics simulation.
+    
+    Based on the model by Helbing and Molnár, this class computes the forces
+    that govern agent movement including goal-directed forces, interpersonal
+    repulsion, and wall avoidance forces.
+    
+    The model combines three main force components:
+    1. Goal-directed force: Drives agents toward their destinations
+    2. People repulsion force: Maintains personal space between agents
+    3. Wall repulsion force: Prevents collisions with boundaries
+    4. Damping force: Provides velocity stabilization
+    
+    Attributes:
+        A (float): Strength of agent-agent repulsion force
+        B (float): Range of agent-agent repulsion force  
+        A_w (float): Strength of agent-wall repulsion force
+        B_w (float): Range of agent-wall repulsion force
+        desired_speed (float): Preferred movement speed for agents
+        relax_time (float): Characteristic reaction time for velocity adjustments
+    """
+    
     def __init__(self, params):
-        self.A = params.get("A", 2.0)          # intensywność odpychania agent-agent
-        self.B = params.get("B", 0.5)          # zakres odpychania agent-agent
-        self.A_w = params.get("A_w", 10.0)     # intensywność odpychania agent-ściana
-        self.B_w = params.get("B_w", 0.2)      # zakres odpychania agent-ściana
-        self.desired_speed = params.get("desired_speed", 1.2)
-        self.relax_time = params.get("tau", 0.5)  # czas reakcji agenta
+        """
+        Initialize the Social Force Model with physical parameters.
+        
+        Args:
+            params (dict): Dictionary containing force model parameters:
+                - A: Agent-agent repulsion strength (default: 2.0)
+                - B: Agent-agent repulsion range (default: 0.5)
+                - A_w: Agent-wall repulsion strength (default: 10.0) 
+                - B_w: Agent-wall repulsion range (default: 0.2)
+                - desired_speed: Preferred movement speed (default: 1.2)
+                - tau: Relaxation time constant (default: 0.5)
+                
+        Note:
+            Higher A/A_w values create stronger repulsion forces.
+            Higher B/B_w values create longer-range repulsion effects.
+            Typical desired_speed ≈ 1.2 m/s represents normal walking speed.
+        """
+        self.A = params.get("A", 2.0)          # Agent-agent repulsion intensity
+        self.B = params.get("B", 0.5)          # Agent-agent repulsion range
+        self.A_w = params.get("A_w", 10.0)     # Agent-wall repulsion intensity
+        self.B_w = params.get("B_w", 0.2)      # Agent-wall repulsion range
+        self.desired_speed = params.get("desired_speed", 1.2)  # m/s
+        self.relax_time = params.get("tau", 0.5)  # Agent reaction time
 
     def compute_force(self, agent, agents, walls):
         """
-        Oblicza całkowitą siłę działającą na agenta
+        Compute the total force acting on an agent from all sources.
+        
+        Args:
+            agent (Agent): The agent for whom forces are being computed
+            agents (list): List of all other agents in the environment
+            walls (list): List of wall segments as ((x1,y1), (x2,y2)) tuples
+            
+        Returns:
+            np.array: Total 2D force vector [fx, fy] acting on the agent
+            
+        Force Composition:
+            f_goal: Driving force toward the agent's goal
+            f_people: Repulsive forces from other agents
+            f_walls: Repulsive forces from walls and boundaries  
+            f_damping: Velocity damping for numerical stability
+            
+        Note:
+            All forces are summed linearly. The damping force prevents
+            velocity oscillations and provides more realistic movement.
         """
         f_goal = self._force_to_goal(agent)
         f_people = self._force_from_people(agent, agents)
         f_walls = self._force_from_walls(agent, walls)
-        f_damping = -0.2 * agent.velocity  # prosty opór ruchu (tarcie)
+        f_damping = -0.2 * agent.velocity  # Simple motion resistance (friction)
 
         total_force = f_goal + f_people + f_walls + f_damping
         return total_force
 
     # -------------------
-    # Składowe modelu:
+    # Model Components:
     # -------------------
 
     def _force_to_goal(self, agent):
         """
-        Siła dążenia do celu: (v_desired * e_i - v_i) / tau
+        Compute the goal-directed driving force.
+        
+        This force represents the agent's intention to move toward their
+        destination at their desired speed. It follows the form:
+            F_goal = (v_desired * direction - v_current) / relaxation_time
+            
+        Args:
+            agent (Agent): The agent being evaluated
+            
+        Returns:
+            np.array: 2D goal-directed force vector
+            
+        Physics Interpretation:
+            - desired_vel: The velocity the agent WANTS to have
+            - agent.velocity: The velocity the agent CURRENTLY has  
+            - relax_time: How quickly the agent can adjust velocity
+            
+        This is essentially a proportional controller that corrects the
+        agent's current velocity toward their desired velocity.
         """
         desired_dir = agent.desired_direction()
         desired_vel = desired_dir * self.desired_speed
@@ -35,46 +110,117 @@ class SocialForceModel:
 
     def _force_from_people(self, agent, agents):
         """
-        Odpychanie od innych agentów wg modelu Helbinga
+        Compute repulsive forces from other agents using Helbing's model.
+        
+        Uses an exponential decay function to model personal space:
+            F_repulsive = A * exp(overlap / B) * direction
+        
+        Plus a physical contact force when agents actually overlap.
+        
+        Args:
+            agent (Agent): The agent experiencing the forces
+            agents (list): Other agents generating repulsive forces
+            
+        Returns:
+            np.array: Cumulative repulsive force from all other agents
+            
+        Calculation Details:
+            - d_vec: Vector from other agent to current agent
+            - dist: Distance between agent centers
+            - n_ij: Normalized direction vector between agents
+            - overlap: Degree of personal space violation (positive = penetration)
+            
+        The exponential term creates strong short-range repulsion that
+        grows rapidly as distance decreases.
         """
         force = np.zeros(2)
         for other in agents:
             if other is agent:
-                continue
+                continue  # Skip self
+                
+            # Calculate distance and direction to other agent
             d_vec = agent.position - other.position
             dist = np.linalg.norm(d_vec)
             if dist == 0:
-                continue
-            n_ij = d_vec / dist
+                continue  # Avoid division by zero for coincident agents
+                
+            n_ij = d_vec / dist  # Normalized direction vector
+            
+            # Calculate overlap of personal spaces
             overlap = agent.radius + other.radius - dist
-            # Odpychanie i siła fizycznego kontaktu
+            
+            # Exponential repulsion force (social force)
             force += self.A * np.exp(overlap / self.B) * n_ij
+            
+            # Physical contact force when agents actually overlap
             if overlap > 0:
-                force += 200 * overlap * n_ij  # „siła ciała” przy kolizji
+                force += 200 * overlap * n_ij  # "Body force" during collision
+                
         return force
 
     def _force_from_walls(self, agent, walls):
         """
-        Siła odpychania od ścian (segmenty linii)
+        Compute repulsive forces from wall segments.
+        
+        For each wall segment, finds the closest point on the wall to the agent
+        and applies a repulsive force based on distance. Uses the same
+        exponential form as agent-agent repulsion but with different parameters.
+        
+        Args:
+            agent (Agent): The agent experiencing the forces
+            walls (list): Wall segments as ((x1,y1), (x2,y2)) tuples
+            
+        Returns:
+            np.array: Cumulative repulsive force from all walls
+            
+        Algorithm:
+            1. For each wall segment, find closest point to agent
+            2. Calculate distance to that closest point
+            3. Apply exponential repulsion based on distance
+            4. Add physical contact force if agent penetrates wall
+            
+        Note:
+            Walls are typically stronger (higher A_w) than agent repulsion
+            since people prefer to maintain more distance from fixed obstacles.
         """
         force = np.zeros(2)
         for (p1, p2) in walls:
-            # wektor od ściany do agenta
+            # Convert to numpy arrays and get wall vector
             wall_vec = np.array(p2) - np.array(p1)
-            wall_dir = wall_vec / np.linalg.norm(wall_vec)
-            # projekcja pozycji agenta na linię ściany
+            wall_length = np.linalg.norm(wall_vec)
+            
+            if wall_length == 0:
+                continue  # Skip zero-length walls
+                
+            wall_dir = wall_vec / wall_length  # Normalized wall direction
+            
+            # Project agent position onto wall line
             diff = agent.position - np.array(p1)
             proj = np.dot(diff, wall_dir)
-            proj = np.clip(proj, 0, np.linalg.norm(wall_vec))
+            
+            # Clamp projection to wall segment boundaries
+            proj = np.clip(proj, 0, wall_length)
+            
+            # Find closest point on wall segment to agent
             closest_point = np.array(p1) + proj * wall_dir
+            
+            # Calculate distance vector and magnitude
             d_vec = agent.position - closest_point
             dist = np.linalg.norm(d_vec)
+            
             if dist == 0:
-                continue
-            n_iw = d_vec / dist
+                continue  # Agent exactly on wall
+                
+            n_iw = d_vec / dist  # Normalized direction from wall to agent
+            
+            # Calculate penetration into wall (positive = inside wall)
             overlap = agent.radius - dist
-            # Odpychanie eksponencjalne + kontakt
+            
+            # Exponential repulsion from wall
             force += self.A_w * np.exp(overlap / self.B_w) * n_iw
+            
+            # Physical contact force when agent penetrates wall
             if overlap > 0:
-                force += 200 * overlap * n_iw  # siła kontaktu
+                force += 200 * overlap * n_iw  # Contact force
+                
         return force

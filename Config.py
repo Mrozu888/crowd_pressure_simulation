@@ -7,7 +7,7 @@ CONFIG = {
         "scale": 50,     # przeliczenie z metrów na piksele (1m = 50px)
         "width": 20 * 50,   # 10m * 50px
         "height": 15 * 50,  # 10m * 50px
-        "exit": [15, 6], # pozycja drzwi w metrach
+        "exit": [16, 6], # pozycja drzwi w metrach
         "walls": [
             ((0, 0), (16, 0)),   # dolna ściana
             ((0, 0), (0, 12)),   # lewa ściana
