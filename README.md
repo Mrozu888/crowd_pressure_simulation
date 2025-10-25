@@ -8,6 +8,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+
 ### To start:
 ```bash
 python3 main.py
