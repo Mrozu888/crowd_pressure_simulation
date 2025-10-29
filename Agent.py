@@ -11,9 +11,9 @@ class Agent:
     
     Attributes:
         position (np.array): Current 2D position in simulation coordinates [x, y]
-        velocity (np.array): Current 2D velocity vector [vx, vy]
+        velocity (np.array): Current 2D velocity vector [vx, vy], predkosc aktualna (po uwzglednieniu zewnetrznych sil)
         goal (np.array): Target position the agent is trying to reach [x, y]
-        desired_speed (float): Preferred movement speed in simulation units/sec
+        desired_speed (float): Preferred movement speed in simulation units/sec, czyli jego prędkość
         radius (float): Physical radius of the agent for collision detection
         active (bool): Whether the agent is still participating in simulation
     """
