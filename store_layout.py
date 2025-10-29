@@ -544,3 +544,60 @@ def draw_layout():
 
 if __name__ == '__main__':
     draw_layout()
+class StoreLayout:
+    """
+    Provides store geometry (walls and obstacles) for the simulation environment.
+    Coordinates are in meters (consistent with the simulation).
+    """
+
+    def __init__(self):
+        # Basic store structure (outer walls + shelves + fridges + cashiers)
+        self.walls = self._extract_walls()
+        self.doors = self._define_doors()
+        self.obstacles = self._extract_obstacles()
+    def _define_doors(self):
+        """
+        Defines door openings in the vestibule (left-bottom area).
+        """
+        doors = [
+            {"x": 0.0, "y_min": STORE_Y + 0.5, "y_max": STORE_Y + 2.0},   # lewa ściana vestibule (wejście z zewnątrz)
+            {"y": -0.2, "x_min": 1.6, "x_max": 3.1},   # górna ściana vestibule (wejście do sklepu)
+            {"x": 6.0, "y_min": STORE_Y + 0.5, "y_max": STORE_Y + 2.0},   # prawa ściana vestibule (wewnętrzne przejście)
+        ]
+        return doors
+    def _extract_walls(self):
+        # Outer walls of the store
+        return [
+            ((STORE_X, STORE_Y), (STORE_X + STORE_W, STORE_Y)),  # bottom
+            ((STORE_X, STORE_Y + STORE_H), (STORE_X + STORE_W, STORE_Y + STORE_H)),  # top
+            ((STORE_X, STORE_Y), (STORE_X, STORE_Y + STORE_H)),  # left
+            ((STORE_X + STORE_W, STORE_Y), (STORE_X + STORE_W, STORE_Y + STORE_H)),  # right
+        ]
+
+    def _extract_obstacles(self):
+        """
+        Convert shelf, fridge, and cashier rectangles into obstacle wall segments.
+        Each rectangle is turned into 4 segments (outline).
+        """
+        obstacles = []
+
+        def rect_to_segments(x, y, w, h):
+            return [
+                ((x, y), (x + w, y)),  # bottom
+                ((x, y + h), (x + w, y + h)),  # top
+                ((x, y), (x, y + h)),  # left
+                ((x + w, y), (x + w, y + h)),  # right
+            ]
+
+        for group in (SHELVES_BASE, FRIDGES_BASE, CASHIERS_BASE, SMALL_CASHIERS):
+            for x, y, w, h in group:
+                obstacles.extend(rect_to_segments(x, y, w, h))
+
+        return obstacles
+
+    def get_walls(self):
+        """
+        Returns the full list of wall segments: outer walls + all obstacles.
+        """
+        return self.walls + self.obstacles
+

@@ -4,7 +4,7 @@ CONFIG = {
     "n_agents": 20,
 
     "environment": {
-        "scale": 50,     # przeliczenie z metrów na piksele (1m = 50px)
+        "scale": 30,     # przeliczenie z metrów na piksele (1m = 50px)
         "width": 20 * 50,   # 10m * 50px
         "height": 15 * 50,  # 10m * 50px
         "exit": [16, 6], # pozycja drzwi w metrach
@@ -14,11 +14,11 @@ CONFIG = {
             ((16, 0), (16, 12)), # prawa ściana
             ((0, 12), (16, 12)), # górna ściana
         ],
-        "door": {
-            "y_min": 5,
-            "y_max": 7,   # otwór w prawej ścianie
-            "x": 16
-        }
+        "doors": [
+    {"x": 0.0, "y_min": 1.3, "y_max": 2.8},   # lewe drzwi (zewnętrzne)
+    {"y": 1.8, "x_min": 3.4, "x_max": 3.6},   # górne drzwi (wejście do sklepu)
+    {"x": 5.5, "y_min": 1.7, "y_max": 2.6},   # prawe drzwi (wewnętrzne)
+],
     },
 
     "sfm": {

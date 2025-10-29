@@ -2,85 +2,92 @@ import pygame
 
 class Visualization:
     """
-    A PyGame-based visualization system for the Social Force Model simulation.
-    
-    This class handles all graphical rendering of the simulation environment,
-    including walls, doors, and agents. It provides real-time visual feedback
-    of agent movements and interactions within the simulated space.
-    
-    Attributes:
-        env: Reference to the simulation environment containing all entities
-        scale: Scaling factor for converting simulation coordinates to pixels
-        screen: PyGame surface object representing the display window
+    PyGame-based visualization system with movable camera (pan & zoom).
+    Hold left mouse button to drag, use mouse wheel to zoom.
     """
-    
+
     def __init__(self, env):
-        """
-        Initialize the visualization system.
-        
-        Args:
-            env: The simulation environment object containing:
-                - width: Environment width in simulation units
-                - height: Environment height in simulation units  
-                - scale: Base scaling factor for coordinate conversion
-                - walls: List of wall segments as ((x1,y1), (x2,y2)) tuples
-                - door: Dictionary containing door position and dimensions
-                - agents: List of agent objects with position and radius
-                
-        Note:
-            The display window size is calculated as (env.width * scale, env.height * scale)
-            to maintain consistent scaling across all rendered elements.
-        """
         self.env = env
         self.scale = env.scale
+        self.base_scale = env.scale  # zapamiętaj bazową skalę
         self.screen = pygame.display.set_mode(
-            (int(env.width * self.scale), int(env.height * self.scale))
+            (int(env.width * self.scale), int(env.height * self.scale)), pygame.RESIZABLE
         )
         pygame.display.set_caption("Social Force Model Simulation")
 
+        # Kamera (przesunięcie)
+        self.camera_offset = [0, 0]
+        self.dragging = False
+        self.last_mouse = (0, 0)
+
+    def handle_events(self):
+        """Obsługuje zdarzenia myszy dla przesuwania i zoomowania."""
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return False
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                return False
+
+            # --- Przeciąganie myszą ---
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:  # lewy przycisk
+                    self.dragging = True
+                    self.last_mouse = event.pos
+                elif event.button == 4:  # scroll up
+                    self.scale *= 1.1
+                elif event.button == 5:  # scroll down
+                    self.scale /= 1.1
+
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 1:
+                    self.dragging = False
+
+            elif event.type == pygame.MOUSEMOTION and self.dragging:
+                dx = event.pos[0] - self.last_mouse[0]
+                dy = event.pos[1] - self.last_mouse[1]
+                self.camera_offset[0] += dx
+                self.camera_offset[1] += dy
+                self.last_mouse = event.pos
+
+        return True
+
+    def _to_screen(self, x_m, y_m):
+        """Konwersja współrzędnych z metrów na piksele + przesunięcie i odwrócenie osi Y."""
+        height_px = int(self.env.height * self.scale)
+        x_px = int(x_m * self.scale) + self.camera_offset[0]
+        y_px = height_px - int(y_m * self.scale) + self.camera_offset[1]
+        return x_px, y_px
+
     def draw(self):
-        """
-        Render the complete simulation frame with all visual elements.
-        
-        Drawing order (back to front):
-        1. Background (light gray)
-        2. Walls (black lines)
-        3. Door (green vertical line)
-        4. Agents (blue circles)
-        
-        Rendering process:
-        - All coordinates are scaled from simulation units to pixels
-        - Only active agents are rendered
-        - Display is updated via pygame.display.flip() after drawing
-        """
-        # Clear screen with light gray background
+        """Renderuje cały kadr."""
         self.screen.fill((240, 240, 240))
 
-        # Draw walls as black line segments
-        # Walls are defined as pairs of points (p1, p2) in simulation coordinates
+        # === ŚCIANY ===
         for (p1, p2) in self.env.walls:
-            x1, y1 = int(p1[0] * self.scale), int(p1[1] * self.scale)
-            x2, y2 = int(p2[0] * self.scale), int(p2[1] * self.scale)
-            pygame.draw.line(self.screen, (0, 0, 0), (x1, y1), (x2, y2), 4) # 4 - Line thickness
+            x1, y1 = self._to_screen(p1[0], p1[1])
+            x2, y2 = self._to_screen(p2[0], p2[1])
+            pygame.draw.line(self.screen, (0, 0, 0), (x1, y1), (x2, y2), 3)
 
-        # Draw door as a green vertical line
-        # Door position and dimensions are defined in the environment
-        door = self.env.door
-        pygame.draw.line(
-            self.screen,
-            (0, 200, 0),  # Green color
-            (int(door["x"] * self.scale), int(door["y_min"] * self.scale)),
-            (int(door["x"] * self.scale), int(door["y_max"] * self.scale)),
-            4,  # Line thickness
-        )
+        # === DRZWI ===
+        for door in self.env.doors:
+    # jeśli to pionowe drzwi (x, y_min, y_max)
+            if "x" in door and "y_min" in door and "y_max" in door:
+                x, y1 = self._to_screen(door["x"], door["y_min"])
+                _, y2 = self._to_screen(door["x"], door["y_max"])
+                pygame.draw.line(self.screen, (0, 200, 0), (x, y1), (x, y2), 4)
+    # jeśli to poziome drzwi (x_min, x_max, y)
+            elif "x_min" in door and "x_max" in door and "y" in door:
+                x1, y = self._to_screen(door["x_min"], door["y"])
+                x2, _ = self._to_screen(door["x_max"], door["y"])
+                pygame.draw.line(self.screen, (0, 200, 0), (x1, y), (x2, y), 4)
 
-        # Draw agents as blue circles
-        # Each agent has position, radius, and active status
+        # === AGENCI ===
         for a in self.env.agents:
             if not a.active:
-                continue  # Skip inactive agents (those who exited)
-            x, y = int(a.position[0] * self.scale), int(a.position[1] * self.scale)
-            pygame.draw.circle(self.screen, (50, 100, 255), (x, y), int(a.radius * self.scale))
+                continue
+            x, y = self._to_screen(a.position[0], a.position[1])
+            pygame.draw.circle(
+                self.screen, (50, 100, 255), (x, y), int(a.radius * self.scale)
+            )
 
-        # Update the display with the newly drawn frame
         pygame.display.flip()

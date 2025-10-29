@@ -193,22 +193,44 @@ class Environment:
     - Deactivates agents that exit through the door
     """
 
+import numpy as np
+from Agent import Agent
+from SocialForceModel import SocialForceModel
+from store_layout import StoreLayout
+
+
+class Environment:
+    """
+    Main simulation environment.
+
+    - Loads geometry (walls) and doors from StoreLayout
+    - Initializes the Social Force Model
+    - Spawns agents inside the vestibule
+    - Deactivates agents that exit through any door
+    """
+
     def __init__(self, config: dict):
         env_conf = config["environment"]
         sfm_conf = config["sfm"]
 
-        # Environment geometry and scaling
-        self.scale: float = env_conf["scale"]
-        self.width: float = env_conf["width"] / self.scale
-        self.height: float = env_conf["height"] / self.scale
-        self.exit = np.array(env_conf["exit"], dtype=float)
-        self.door = env_conf["door"]  # dict with keys: x, y_min, y_max
+        # === Environment geometry ===
+        self.scale = env_conf["scale"]
+        self.width = env_conf["width"] / self.scale
+        self.height = env_conf["height"] / self.scale
 
-        # Load walls from the store layout (list of segments: ((x1, y1), (x2, y2)))
+        # === Load layout (walls + doors) ===
         layout = StoreLayout()
         self.walls = layout.get_walls()
+        self.doors = layout.doors  # list of multiple doors
 
-        # Physics model and agents
+        # === Define main exit point (center of right vestibule door) ===
+        right_door = self.doors[-1]  # last door from list (prawe drzwi vestibule)
+        self.exit = np.array([
+            right_door["x"] + 1.0,
+            (right_door["y_min"] + right_door["y_max"]) / 2.0
+        ])
+
+        # === Initialize social force model and agents ===
         self.model = SocialForceModel(sfm_conf)
         self.agents = self._create_agents(
             n=config["n_agents"],
@@ -218,27 +240,37 @@ class Environment:
 
     def _create_agents(self, n: int, goal: np.ndarray, speed: float):
         """
-        Create agents at random spawn positions.
-        Adjust the spawn box to your store dimensions if needed.
+        Spawn agents inside vestibule (bottom-left area of the store).
         """
         agents = []
         for _ in range(n):
-            x = np.random.uniform(2.0, 6.0)
-            y = np.random.uniform(2.0, 10.0)
+            # spawn in vestibule (bottom-left rectangle)
+            x = np.random.uniform(1.0, 4.5)
+            y = np.random.uniform(-3.5, -1.0)
             agents.append(Agent((x, y), goal, speed))
         return agents
 
     def remove_exited_agents(self):
         """
-        Mark agents as inactive once they pass through the door opening.
+        Deactivate agents that pass through any of the defined doors.
         """
-        x_door = self.door["x"]
-        y_min = self.door["y_min"]
-        y_max = self.door["y_max"]
         for a in self.agents:
-            if (
-                a.active
-                and a.position[0] > x_door + 0.5
-                and y_min < a.position[1] < y_max
-            ):
-                a.active = False
+            if not a.active:
+                continue
+            for door in self.doors:
+    # --- pionowe drzwi (x, y_min, y_max) ---
+                if "x" in door and "y_min" in door and "y_max" in door:
+                    if (
+                        a.position[0] > door["x"] - 0.2 and
+                        door["y_min"] < a.position[1] < door["y_max"]
+                    ):
+                        a.active = False
+
+    # --- poziome drzwi (x_min, x_max, y) ---
+                elif "x_min" in door and "x_max" in door and "y" in door:
+                    if (
+                        a.position[1] > door["y"] - 0.2 and
+                        door["x_min"] < a.position[0] < door["x_max"]
+                    ):
+                        a.active = False
+
