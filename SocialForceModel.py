@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class SocialForceModel:
     """
     Implements the Social Force Model for pedestrian dynamics simulation.
