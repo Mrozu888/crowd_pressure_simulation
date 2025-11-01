@@ -4,6 +4,7 @@ from Environment import Environment
 from Simulation import Simulation
 from Visualization import Visualization
 
+
 def main():
     """
     Main entry point for the Social Force Model simulation application.
