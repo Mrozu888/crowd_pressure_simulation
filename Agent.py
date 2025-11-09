@@ -1,94 +1,78 @@
 import numpy as np
 
+
 class Agent:
     """
     Represents a pedestrian agent in the Social Force Model simulation.
-    
-    Each agent has physical properties (position, velocity, size) and behavioral
-    characteristics (goal, desired speed) that govern their movement through
-    the environment. The agent responds to social forces while navigating toward
-    its target destination.
-    
-    Attributes:
-        position (np.array): Current 2D position in simulation coordinates [x, y]
-        velocity (np.array): Current 2D velocity vector [vx, vy]
-        goal (np.array): Target position the agent is trying to reach [x, y]
-        desired_speed (float): Preferred movement speed in simulation units/sec
-        radius (float): Physical radius of the agent for collision detection
-        active (bool): Whether the agent is still participating in simulation
+    Now supports following a multi-point path.
     """
-    
-    def __init__(self, position, goal, desired_speed, radius=0.3):
+
+    def __init__(self, position, goal=None, desired_speed=1.3, radius=0.2, path=None):
         """
         Initialize a new agent with specified properties.
-        
+
         Args:
-            position (tuple/list): Starting position as (x, y) coordinates
-            goal (tuple/list): Target position as (x, y) coordinates  
-            desired_speed (float): Preferred cruising speed in sim units/second
-            radius (float, optional): Physical size for collision detection. 
-                                    Defaults to 0.3 simulation units.
-                                    
-        Note:
-            The radius of 0.3 units represents approximately 30cm for a typical
-            pedestrian, assuming 1 simulation unit = 1 meter.
+            position (tuple/list): Starting position as (x, y)
+            goal (tuple/list, optional): Single final target position
+            desired_speed (float): Preferred cruising speed
+            radius (float, optional): Agent's physical radius
+            path (list of tuples, optional): Sequence of waypoints [(x1,y1), (x2,y2), ...]
         """
-        self.position = np.array(position, dtype=float)
-        self.velocity = np.zeros(2)  # Start with zero velocity
-        self.goal = np.array(goal, dtype=float)
+        # print(position)
+        self.position = np.array(position, dtype=np.float32)
+        print(self.position)
+        self.velocity = np.zeros(2)
         self.desired_speed = desired_speed
         self.radius = radius
-        self.active = True  # Whether agent is still in simulation
+        self.active = True
+
+        # If path provided, use it; otherwise, treat goal as single endpoint
+        if path is not None:
+            self.path = [np.array(p, dtype=float) for p in path]
+            self.path_index = 0
+            self.goal = self.path[0]
+        else:
+            self.path = None
+            self.path_index = None
+            self.goal = np.array(goal, dtype=float) if goal is not None else None
 
     def desired_direction(self):
-        """
-        Calculate the normalized direction vector toward the agent's goal.
-        
-        Returns:
-            np.array: Normalized 2D direction vector [dx, dy] pointing toward goal.
-                     Returns zero vector if already at goal position.
-                     
-        Calculation:
-            direction = (goal - position) / ||goal - position||
-            
-        Note:
-            This represents the agent's intended movement direction without
-            considering obstacles or other agents. The Social Force Model will
-            combine this with other forces to determine actual movement.
-        """
+        """Return normalized direction toward the current goal or waypoint."""
+        if self.goal is None or not self.active:
+            return np.zeros(2)
+
         dir_vec = self.goal - self.position
         norm = np.linalg.norm(dir_vec)
-        # Normalize (vector to goal with length 1) if not at goal, otherwise return zero vector
-        return dir_vec / norm if norm > 0 else np.zeros(2)
+        return dir_vec / norm if norm > 1e-6 else np.zeros(2)
+
+    def advance_path(self, threshold=0.2):
+        """
+        Check if agent reached current waypoint and move to next one.
+        If at end of path, deactivate the agent.
+        """
+        if self.path is None or not self.active:
+            return
+
+        # Distance to current goal
+        dist = np.linalg.norm(self.goal - self.position)
+
+        # If reached current waypoint
+        if dist < threshold:
+            self.path_index += 1
+            if self.path_index < len(self.path):
+                self.goal = self.path[self.path_index]
+            else:
+                self.active = False  # Path complete
+                self.goal = None
 
     def update(self, force, dt):
-        """
-        Update agent's state based on applied forces and time step.
-        
-        Implements Newtonian mechanics:
-        - Acceleration = Force (assuming unit mass)
-        - Velocity += Acceleration × time
-        - Position += Velocity × time
-        
-        Args:
-            force (np.array): Total 2D force vector applied to the agent [fx, fy]
-            dt (float): Time step in seconds for numerical integration
-            
-        Note:
-            This method uses the Euler integration method which is simple
-            but may accumulate numerical errors over time. More sophisticated
-            integrators could be used for improved accuracy.
-            
-        Example:
-            If an agent receives social forces from the environment, this method
-            converts those forces into actual movement.
-        """
+        """Update agent’s velocity and position under given force and timestep."""
         if not self.active:
-            return  # Skip update for inactive (exited) agents
-            
-        # Apply forces to update velocity (assuming unit mass: a = F/m = F)
-        acc = force
+            return
+
+        acc = force  # assuming unit mass
         self.velocity += acc * dt
-        
-        # Update position based on current velocity
         self.position += self.velocity * dt
+
+        # After moving, check if we reached current waypoint
+        self.advance_path()

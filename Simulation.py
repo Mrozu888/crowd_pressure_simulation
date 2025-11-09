@@ -62,12 +62,13 @@ class Simulation:
         """
         # Step 1: Update all active agents
         for agent in self.env.agents:
+            # print("tu",agent.position, agent.velocity)
             if not agent.active:
                 continue  # Skip inactive (exited) agents
                 
             # Compute total force acting on this agent from all sources
-            force = self.env.model.compute_force(agent, self.env.agents, self.env.walls)
-            
+            force = self.env.model.compute_force(agent, self.env.agents, self.env.walls+self.env.shelves)
+            # print("force: ",force)
             # Apply force to update agent's position and velocity
             agent.update(force, self.dt)
         
