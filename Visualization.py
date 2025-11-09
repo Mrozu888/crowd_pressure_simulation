@@ -67,7 +67,7 @@ class Visualization:
             end_pos = self._transform_coords(p2)
             # Półki mogą być cieńsze niż ściany
             pygame.draw.line(self.screen, self.SHELF_COLOR, start_pos, end_pos, 2)
-
+    
     def _draw_rect_objects(self, objects, color):
         """
         Pomocnicza metoda do rysowania obiektów prostokątnych (kasy, palety).
