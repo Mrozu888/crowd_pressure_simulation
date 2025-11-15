@@ -4,10 +4,10 @@ import numpy as np
 class Agent:
     """
     Represents a pedestrian agent in the Social Force Model simulation.
-    Now supports following a multi-point path.
+    Now supports following a multi-point path and delayed spawning.
     """
 
-    def __init__(self, position, goal=None, desired_speed=1.3, radius=0.2, path=None):
+    def __init__(self, position, goal=None, desired_speed=1.3, radius=0.2, path=None, spawn_time=0.0):
         """
         Initialize a new agent with specified properties.
 
@@ -17,19 +17,26 @@ class Agent:
             desired_speed (float): Preferred cruising speed
             radius (float, optional): Agent's physical radius
             path (list of tuples, optional): Sequence of waypoints [(x1,y1), (x2,y2), ...]
+            spawn_time (float, optional): Simulation time (in seconds) when the agent should become active.
         """
-        # print(position)
         self.position = np.array(position, dtype=np.float32)
-        print(self.position)
+        # print(self.position) # Usunąłem printy dla czytelności
         self.velocity = np.zeros(2)
         self.desired_speed = desired_speed
         self.radius = radius
-        self.active = True
+
+        # --- ZMIANY ---
+        self.spawn_time = spawn_time
+        # Agent jest aktywny tylko jeśli jego czas spawnu już minął (lub jest równy 0)
+        self.active = (self.spawn_time <= 0.0)
+        # --- KONIEC ZMIAN ---
 
         # If path provided, use it; otherwise, treat goal as single endpoint
         if path is not None:
             self.path = [np.array(p, dtype=float) for p in path]
             self.path_index = 0
+            # Ustawiamy pierwszy cel, nawet jeśli agent jest nieaktywny.
+            # Metoda desired_direction() i tak zwróci zero, jeśli self.active == False
             self.goal = self.path[0]
         else:
             self.path = None
@@ -38,7 +45,10 @@ class Agent:
 
     def desired_direction(self):
         """Return normalized direction toward the current goal or waypoint."""
+        # --- ZMIANA ---
+        # Agent nie ma celu, jeśli jest nieaktywny
         if self.goal is None or not self.active:
+            # --- KONIEC ZMIANY ---
             return np.zeros(2)
 
         dir_vec = self.goal - self.position
