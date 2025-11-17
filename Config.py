@@ -7,9 +7,7 @@ CONFIG = {
         "scale": 40,
         "width": 20,
         "height": 15,
-        "exit": [17, 7.5],  # To jest używane jako cel w generatorze ścieżek
         "walls": [
-            # ... (bez zmian, zostaw jak było) ...
             ((0, 0), (20, 0)),
             ((0, 0), (0, 13)),
             ((0, 14.5), (0, 15)),
@@ -31,7 +29,6 @@ CONFIG = {
             ((0, 13), (0, 14.5)),
         ],
         "shelves": [
-            # ... (bez zmian, zostaw jak było) ...
             ((14.75, 12), (14.75, 14.85)),
             ((15, 12), (15, 14.85)),
             ((14.75, 14.85), (15, 14.85)),
@@ -110,21 +107,22 @@ CONFIG = {
         "A": 2.0,
         "B": 0.8,
         "A_w": 10.0,
-        "B_w": 0.2,
+        "B_w": 0.1,
         "desired_speed": 1.3,
         "tau": 0.5,
     },
 
-    # === NOWA SEKCJA ===
-    # Zastąp starą listę "agents" tą konfiguracją
+
     "agent_generation": {
         "n_agents": 20,  # Całkowita liczba agentów do wygenerowania
-        "max_spawn_time": 20.0,  # Agenci będą się pojawiać losowo w ciągu 60 sekund
+        "max_spawn_time": 30.0,  # Agenci będą się pojawiać losowo w ciągu 60 sekund
 
         "path_zones": {
             # Strefy jako ((min_x, min_y), (max_x, max_y))
             "spawn": ((-2, 13), (-1, 15)),  # Gdzie agenci pojawiają się (poza sklepem)
-            "entrance": ((0, 13.75), (2, 12.5)),  # Cel zaraz po wejściu
+            "entrance": ((0, 13.75), (1.75, 12.)),  # Cel zaraz po wejściu
+            # Ostateczny cel, taki sam jak "exit" w environment
+            "exits": [(3.5, 13.75),((-1, 13.75))],  # To jest używane jako cel w generatorze ścieżek
 
             # Strefy alejek (między półkami)
             "aisles_x_ranges": [  # Lista zakresów (min_x, max_x) dla każdej alejki
@@ -139,12 +137,14 @@ CONFIG = {
                 (17.5, 18.75)  # Między półką 8 a ścianą prawą
             ],
             "aisle_y_range": (1, 10.5),  # Zakres Y dla poruszania się po alejkach
+            # Definiuje współrzędną Y górnych i dolnych "wlotów" do alejek
+            "aisle_top_y": 11.5,     # Korytarz między alejkami (y=11) a kasami (y=12)
+            "aisle_bottom_y": 1,   # Korytarz między alejkami (y=2) a półką tylną (y=0.5)
 
             # Strefa "oczekiwania" przed kasami
             "cashier_area": ((5.0, 10.0), (14.0, 11.5)),
 
-            # Ostateczny cel, taki sam jak "exit" w environment
-            "exit_goal": (17, 7.5)
+
         },
 
         "path_config": {
@@ -152,11 +152,5 @@ CONFIG = {
             "max_aisles": 4  # Maksymalna liczba alejek
         }
     }
-    # === KONIEC NOWEJ SEKCJI ===
 
-    # Usuń lub zakomentuj starą sekcję "agents":
-    # "agents": [
-    #     {"path": [(-1, 15), (1, 14), (1.5, 10), (1, 1), (19, 1), (17, 7.5)]},
-    #     ...
-    # ]
 }

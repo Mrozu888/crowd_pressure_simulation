@@ -43,11 +43,11 @@ class SocialForceModel:
             Typical desired_speed ≈ 1.2 m/s represents normal walking speed.
         """
         self.A = params.get("A", 1.0)          # Agent-agent repulsion intensity
-        self.B = params.get("B", 0.2)          # Agent-agent repulsion range
+        self.B = params.get("B", 0.1)          # Agent-agent repulsion range
         self.A_w = params.get("A_w", 10.0)     # Agent-wall repulsion intensity
-        self.B_w = params.get("B_w", 0.2)      # Agent-wall repulsion range
+        self.B_w = params.get("B_w", 0.1)      # Agent-wall repulsion range
         self.desired_speed = params.get("desired_speed", 1.2)  # m/s
-        self.relax_time = params.get("tau", 0.4)  # Agent reaction time
+        self.relax_time = params.get("tau", 0.5)  # Agent reaction time
 
     def compute_force(self, agent, agents, walls):
         """
