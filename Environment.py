@@ -14,7 +14,6 @@ class Environment:
         self.scale = env_conf["scale"]
         self.width = env_conf["width"]
         self.height = env_conf["height"]
-        # self.exit = np.array(env_conf["exit"])
 
         self.walls = env_conf["walls"]
         self.shelves = env_conf["shelves"]
