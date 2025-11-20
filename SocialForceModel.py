@@ -75,8 +75,17 @@ class SocialForceModel:
         f_people = self._force_from_people(agent, agents)
         f_walls = self._force_from_walls(agent, walls)
         f_damping = -0.2 * agent.velocity  # Simple motion resistance (friction)
-
         total_force = f_goal + f_people + f_walls + f_damping
+        neighbors = 0
+        for other in agents:
+            if other is not agent:
+                if np.linalg.norm(agent.position - other.position) < 0.5:
+                    neighbors += 1
+
+        if neighbors >= 2:
+            kick_strength = 0.1 + 0.05 * neighbors
+            total_force += kick_strength * np.random.randn(2)
+        
         return total_force
 
     # -------------------
@@ -214,5 +223,27 @@ class SocialForceModel:
             # Physical contact force when agent penetrates wall
             if overlap > 0:
                 force += 200 * overlap * n_iw  # Contact force
-                
+            if agent.goal is not None:
+
+    # kierunek do celu
+                goal_vec = agent.goal - agent.position
+                goal_norm = np.linalg.norm(goal_vec)
+
+                if goal_norm > 1e-6:
+                    goal_dir = goal_vec / goal_norm
+
+        # kierunek wzdłuż ściany (tangencjalny)
+                    slide_dir_1 = np.array([-n_iw[1], n_iw[0]])   # +90°
+                    slide_dir_2 = np.array([ n_iw[1], -n_iw[0]])  # -90°
+
+        # wybieramy stronę, która bardziej zbliża do celu
+                    if np.dot(slide_dir_1, goal_dir) > np.dot(slide_dir_2, goal_dir):
+                        tang_dir = slide_dir_1
+                    else:
+                        tang_dir = slide_dir_2
+
+        # Siła ślizgu działa, gdy agent jest blisko ściany
+                    slide_strength = max(0.0, (0.4 - dist)) * self.A_w * 0.4
+
+                    force += slide_strength * tang_dir
         return force

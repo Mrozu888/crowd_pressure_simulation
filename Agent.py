@@ -55,7 +55,7 @@ class Agent:
         norm = np.linalg.norm(dir_vec)
         return dir_vec / norm if norm > 1e-6 else np.zeros(2)
 
-    def advance_path(self, threshold=0.2):
+    def advance_path(self, threshold=0.3):
         """
         Check if agent reached current waypoint and move to next one.
         If at end of path, deactivate the agent.

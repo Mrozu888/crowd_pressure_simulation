@@ -104,10 +104,10 @@ CONFIG = {
 
     "sfm": {
         # ... (bez zmian) ...
-        "A": 2.0,
-        "B": 0.8,
-        "A_w": 10.0,
-        "B_w": 0.1,
+        "A": 1.5,
+        "B": 0.7,
+        "A_w": 5.0,
+        "B_w": 0.2,
         "desired_speed": 1.3,
         "tau": 0.5,
     },
@@ -149,7 +149,7 @@ CONFIG = {
 
         "path_config": {
             "min_aisles": 1,  # Minimalna liczba alejek do odwiedzenia
-            "max_aisles": 4  # Maksymalna liczba alejek
+            "max_aisles": 1  # Maksymalna liczba alejek
         }
     }
 
