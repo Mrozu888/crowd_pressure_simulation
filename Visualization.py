@@ -8,10 +8,15 @@ class Visualization:
     DOOR_COLOR = (0, 200, 0)
     AGENT_COLOR = (50, 50, 255)
 
-    # --- Nowe kolory ---
+    # --- Nowe kolory otoczenia ---
     CASH_REGISTER_COLOR = (255, 100, 0)  # Np. pomarańczowy
     SHELF_COLOR = (120, 120, 120)  # Np. szary
     PALLET_COLOR = (139, 69, 19)  # Np. brązowy (kolor drewna)
+
+    # --- Nowe kolory ścieżek ---
+    PATH_LINE_COLOR = (200, 200, 200)  # Jasnoszara linia (ścieżka A*)
+    WAYPOINT_COLOR = (0, 0, 255)  # Niebieskie kropki (cele strategiczne)
+    CURRENT_TARGET_COLOR = (0, 255, 0)  # Zielona kropka (gdzie agent idzie teraz)
 
     def __init__(self, env):
         self.env = env
@@ -67,7 +72,7 @@ class Visualization:
             end_pos = self._transform_coords(p2)
             # Półki mogą być cieńsze niż ściany
             pygame.draw.line(self.screen, self.SHELF_COLOR, start_pos, end_pos, 2)
-    
+
     def _draw_rect_objects(self, objects, color):
         """
         Pomocnicza metoda do rysowania obiektów prostokątnych (kasy, palety).
@@ -88,6 +93,41 @@ class Visualization:
             # Stwórz obiekt Rect i narysuj go
             obj_rect = pygame.Rect(screen_pos[0], screen_pos[1], screen_w, screen_h)
             pygame.draw.rect(self.screen, color, obj_rect)
+
+    def _draw_paths(self, agents):
+        """
+        Nowa metoda do wizualizacji ścieżek agentów.
+        Rysuje:
+        1. Linię całej ścieżki (szara)
+        2. Cele strategiczne (niebieskie kropki) - jeśli agent ma atrybut 'waypoints'
+        3. Aktualny cel (zielona kropka)
+        """
+        for agent in agents:
+            # Rysujemy tylko dla aktywnych agentów, którzy mają ścieżkę
+            if not agent.active or agent.path is None or len(agent.path) < 2:
+                continue
+
+            # --- 1. Konwersja całej ścieżki na piksele ---
+            # Używamy list comprehension i Twojej metody transformacji
+            pixel_path = [self._transform_coords(p) for p in agent.path]
+
+            # Rysowanie linii ścieżki (szara)
+            if len(pixel_path) > 1:
+                pygame.draw.lines(self.screen, self.PATH_LINE_COLOR, False, pixel_path, 1)
+
+            # --- 2. Rysowanie celów strategicznych (Niebieskie kropki) ---
+            # Sprawdzamy czy agent ma zapisane 'waypoints' (te rzadkie punkty przed A*)
+            if hasattr(agent, 'waypoints') and agent.waypoints:
+                for wp in agent.waypoints:
+                    wp_screen = self._transform_coords(wp)
+                    pygame.draw.circle(self.screen, self.WAYPOINT_COLOR, wp_screen, 4)
+
+            # --- 3. Aktualny cel (Zielona kropka) ---
+            # Pokazuje, w który punkt ścieżki A* agent celuje w tej chwili
+            current_idx = agent.path_index
+            if 0 <= current_idx < len(pixel_path):
+                current_target_screen = pixel_path[current_idx]
+                pygame.draw.circle(self.screen, self.CURRENT_TARGET_COLOR, current_target_screen, 3)
 
     def _draw_agents(self, agents):
         """Rysuje agentów (jako kółka)."""
@@ -128,9 +168,13 @@ class Visualization:
             # Kasy również jako prostokąty, ale w innym kolorze
             self._draw_rect_objects(self.env.cash_registers, self.CASH_REGISTER_COLOR)
 
-        # 3. Rysuj agentów na wierzchu
+        # 3. Rysuj ścieżki (POD agentami, żeby ich nie zasłaniały)
+        if hasattr(self.env, 'agents'):
+            self._draw_paths(self.env.agents)
+
+        # 4. Rysuj agentów na wierzchu
         if hasattr(self.env, 'agents'):
             self._draw_agents(self.env.agents)
 
-        # 4. Zaktualizuj wyświetlacz
+        # 5. Zaktualizuj wyświetlacz
         pygame.display.flip()
