@@ -3,6 +3,7 @@ from Agent import Agent
 from SocialForceModel import SocialForceModel
 from path_generation import generate_shopping_path
 from PathFinding import GridMap, a_star_search
+from QueueManager import QueueManager
 
 
 class Environment:
@@ -17,18 +18,23 @@ class Environment:
         self.scale = env_conf["scale"]
         self.width = env_conf["width"]
         self.height = env_conf["height"]
-
+        all_obstacles = self.walls + self.shelves + self._cashier_rects_to_lines()
         self.grid_map = GridMap(
             self.width,
             self.height,
-            self.walls,
-            self.shelves,
+            all_obstacles,
+            [],
             grid_size=0.1,
             obstacle_buffer=0.3
         )
 
         self.model = SocialForceModel(sfm_conf)
         self.agents = self._create_agents(config, sfm_conf["desired_speed"])
+        self.model = SocialForceModel(sfm_conf)
+        self.agents = self._create_agents(config, sfm_conf["desired_speed"])
+
+        # Menedżer kolejek do kas
+        self.queue_manager = QueueManager(self, config)
 
     def _create_agents(self, config, speed):
         agents = []
@@ -87,7 +93,7 @@ class Environment:
             segment = a_star_search(self.grid_map, current_start_pos, target_pos)
 
             if segment is None or len(segment) < 2:
-                print(f"⚠️ Nie można dojść do celu: {target_pos}. Pomijam go.")
+                print(f"Nie można dojść do celu: {target_pos}. Pomijam go.")
                 continue
 
             # Konwersja segmentu A* na format słownikowy
@@ -109,8 +115,23 @@ class Environment:
         return full_path
 
     def remove_exited_agents(self):
-        """Usuwa agentów, którzy dotarli do celu."""
+        """Usuwa agentów, którzy opuścili sklep (oznaczonych jako exited=True)."""
         self.agents = [
             agent for agent in self.agents
-            if agent.path is not None and agent.path_index < len(agent.path)
+            if not getattr(agent, "exited", False)
         ]
+    
+    def _cashier_rects_to_lines(self):
+        lines = []
+        for reg in self.cash_registers:
+            x, y = reg["pos"]
+            w, h = reg["size"]
+        # zamieniamy prostokąt na 4 krawędzie (jak ściany)
+            lines += [
+                ((x, y), (x + w, y)),
+                ((x + w, y), (x + w, y + h)),
+                ((x + w, y + h), (x, y + h)),
+                ((x, y + h), (x, y))
+            ]
+        return lines
+

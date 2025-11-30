@@ -76,6 +76,7 @@ CONFIG = {
         "pallets": [],
         "cash_registers": [
             {"pos": (14, 14.25), "size": (0.6, 0.6)},
+            {"pos": (12, 14.25), "size": (0.6, 0.6)},
         ]
     },
 
@@ -96,7 +97,7 @@ CONFIG = {
         # Stałe punkty infrastruktury
         "spawn_point": (-1.5, 14.0),     # Punkt startu poza sklepem
         "entrance_points": [(1.7, 12.5)],   # Punkt zaraz po wejściu
-        "cashier_point": (13.5, 13.5),   # Punkt przy kasie
+        #"cashier_point": (13.5, 13.5),   # Punkt przy kasie
         "exit_point": (10, 14.0),       # Punkt wyjścia
 
         # Lista punktów zakupowych do wylosowania

@@ -17,7 +17,8 @@ class Agent:
         self.is_waiting = False
         self.wait_timer = 0.0
         # ---------------------------------
-
+        self.finished_path = False 
+        self.exited = False     
         if path is not None:
             # path to teraz lista słowników [{'pos': (x,y), 'wait': czas}, ...]
             self.path = path
@@ -44,7 +45,7 @@ class Agent:
         Check if agent reached current waypoint and move to next one.
         Handles waiting time.
         """
-        if self.path is None or not self.active:
+        if self.path is None or not self.active or self.goal is None:
             return
 
         # Jeśli aktualnie czeka, nie sprawdzamy dystansu (logika czasu jest w update)
@@ -74,7 +75,7 @@ class Agent:
             self.goal = np.array(self.path[self.path_index]['pos'], dtype=float)
             self.is_waiting = False
         else:
-            self.active = False
+            self.finished_path = True
             self.goal = None
 
     def update(self, force, dt):

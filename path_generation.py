@@ -49,17 +49,5 @@ def generate_shopping_path(zones_config, path_config=None):
     selected_targets.sort(key=lambda p: p['pos'][0])  # Sortujemy po X z 'pos'
     path.extend(selected_targets)
 
-    # --- 5. Kasa (z czasem) ---
-    cashier = zones_config["cashier_point"]
-    cx = cashier[0] + np.random.uniform(-0.4, 0.4)
-    cy = cashier[1] + np.random.uniform(-0.4, 0.4)
-
-    # Przy kasie dłużej (3-7s)
-    cashier_wait = random.uniform(3.0, 7.0)
-    path.append(make_point(cx, cy, cashier_wait))
-
-    # --- 6. Wyjście ---
-    ex = zones_config["exit_point"]
-    path.append(make_point(ex[0], ex[1], 0.0))
 
     return path
