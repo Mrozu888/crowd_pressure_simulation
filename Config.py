@@ -1,7 +1,6 @@
 CONFIG = {
     "dt": 0.05,
     "steps": 10000,
-    # "n_agents" jest teraz ignorowane, używamy "n_agents" z "agent_generation"
 
     "environment": {
         "scale": 40,
@@ -10,24 +9,18 @@ CONFIG = {
         "walls": [
             ((0, 0), (20, 0)),
             ((0, 0), (0, 13)),
-            ((0, 14.5), (0, 15)),
+            ((0, 14.5), (0, 16.5)),
             ((20, 0), (20, 15)),
             ((0, 15), (20, 15)),
             ((0, 12.5), (1.25, 12.5)),
             ((2.5, 12.5), (4.5, 12.5)),
             ((4.5, 12.5), (4.5, 13.5)),
             ((4.5, 15), (4.5, 14.5)),
-            # ((9.15, 13.6), (9.15, 12)),
-            # ((11.9, 13.6), (11.9, 12.25)),
-            # ((14.65, 15), (14.65, 12)),
-            # ((7.7, 13.5), (7.7, 12)),
-            # ((6.2, 13.5), (6.2, 12)),
-            # ((16.35, 15), (16.35, 12)),
-            # ((16.35, 12), (20, 12))
         ],
         "doors": [
             ((0, 13), (0, 14.5)),
         ],
+        # Twoje półki (bez zmian)
         "shelves": [
             ((14.75, 12), (14.75, 14.85)),
             ((15, 12), (15, 14.85)),
@@ -82,28 +75,11 @@ CONFIG = {
         ],
         "pallets": [],
         "cash_registers": [
-            # # ... (bez zmian, zostaw jak było) ...
-            # {"pos": (5.5, 12), "size": (0.6, 1.5)},
-            # {"pos": (7, 12), "size": (0.6, 1.5)},
-            # {"pos": (8.5, 12), "size": (0.6, 1.5)},
-            # {"pos": (9.25, 12.25), "size": (0.6, 0.6)},
-            # {"pos": (9.25, 13), "size": (0.6, 0.6)},
-            # {"pos": (9.75, 14.35), "size": (0.6, 0.6)},
-            # {"pos": (10.75, 14.35), "size": (0.6, 0.6)},
-            # {"pos": (12.5, 14.35), "size": (0.6, 0.6)},
-            # {"pos": (11.25, 12.25), "size": (0.6, 0.6)},
-            # {"pos": (11.25, 13), "size": (0.6, 0.6)},
-            # {"pos": (12, 12.25), "size": (0.6, 0.6)},
-            # {"pos": (12, 13), "size": (0.6, 0.6)},
-            # {"pos": (14, 12), "size": (0.6, 0.6)},
-            # {"pos": (14, 12.75), "size": (0.6, 0.6)},
-            # {"pos": (14, 13.5), "size": (0.6, 0.6)},
             {"pos": (14, 14.25), "size": (0.6, 0.6)},
         ]
     },
 
     "sfm": {
-        # ... (bez zmian) ...
         "A": 2.0,
         "B": 0.8,
         "A_w": 10.0,
@@ -112,62 +88,29 @@ CONFIG = {
         "tau": 0.5,
     },
 
-
+    # --- TUTAJ ZMIANY: RĘCZNA DEFINICJA PUNKTÓW ---
     "agent_generation": {
-        "n_agents": 20,  # Całkowita liczba agentów do wygenerowania
-        "max_spawn_time": 30.0,  # Agenci będą się pojawiać losowo w ciągu 60 sekund
+        "n_agents": 20,
+        "max_spawn_time": 30.0,
 
-        "path_zones": {
-            # Strefy jako ((min_x, min_y), (max_x, max_y))
-            "spawn": ((-2, 13), (-1, 15)),  # Gdzie agenci pojawiają się (poza sklepem)
-            "entrance": ((0, 13.75), (1.75, 12.)),  # Cel zaraz po wejściu
-            # Ostateczny cel, taki sam jak "exit" w environment
-            "exits": [(3.5, 13.75),((-1, 13.75))],  # To jest używane jako cel w generatorze ścieżek
+        # Stałe punkty infrastruktury
+        "spawn_point": (-1.5, 14.0),     # Punkt startu poza sklepem
+        "entrance_points": [(0.1, 14), (1.7, 12.5)],   # Punkt zaraz po wejściu
+        "cashier_point": (13.5, 13.5),   # Punkt przy kasie
+        "exit_point": (10, 14.0),       # Punkt wyjścia
 
-            # Strefy alejek (między półkami)
-            "aisles_x_ranges": [
-                # 1. Między lewą ścianą (0.5) a Półką 1 (2.25) -> (0.5+0.25, 2.25-0.25)
-                (0.75, 2.0),
-
-                # 2. Między Półką 1 (3.25) a Półką 2 (4.25) -> (3.25+0.25, 4.25-0.25)
-                (3.5, 4.0),
-
-                # 3. Między Półką 2 (4.75) a Półką 3 (6.25) -> (4.75+0.25, 6.25-0.25)
-                (5.0, 6.0),
-
-                # 4. Między Półką 3 (6.75) a Półką 4 (8.25) -> (6.75+0.25, 8.25-0.25)
-                (7.0, 8.0),
-
-                # 5. Między Półką 4 (8.75) a Półką 5 (10.25) -> (8.75+0.25, 10.25-0.25)
-                (9.0, 10.0),
-
-                # 6. Między Półką 5 (10.75) a Półką 6 (12.25) -> (10.75+0.25, 12.25-0.25)
-                (11.0, 12.0),
-
-                # 7. Między Półką 6 (12.75) a Półką 7 (14.25) -> (12.75+0.25, 14.25-0.25)
-                (13.0, 14.0),
-
-                # 8. Między Półką 7 (14.75) a Półką 8 (16.25) -> (14.75+0.25, 16.25-0.25)
-                (15.0, 16.0),
-
-                # 9. Między Półką 8 (17.25) a prawą ścianą (19.0) -> (17.25+0.25, 19.0-0.25)
-                (17.5, 18.75)
-            ],
-            "aisle_y_range": (1, 10.5),  # Zakres Y dla poruszania się po alejkach
-            # Definiuje współrzędną Y górnych i dolnych "wlotów" do alejek
-            "aisle_top_y": 11.5,     # Korytarz między alejkami (y=11) a kasami (y=12)
-            "aisle_bottom_y": 1,   # Korytarz między alejkami (y=2) a półką tylną (y=0.5)
-
-            # Strefa "oczekiwania" przed kasami
-            "cashier_area": ((5.0, 10.0), (14.0, 11.5)),
-
-
-        },
-
-        "path_config": {
-            "min_aisles": 1,  # Minimalna liczba alejek do odwiedzenia
-            "max_aisles": 4  # Maksymalna liczba alejek
-        }
+        # Lista punktów zakupowych do wylosowania
+        # "pos": (x, y) - gdzie agent ma podejść
+        # "prob": 0.0-1.0 - szansa, że agent wybierze ten punkt
+        "points_of_interest": [
+            {"name": "Warzywa",  "pos": (1.5, 6.0),   "prob": 0.9}, # Bardzo popularne
+            {"name": "Nabiał",   "pos": (3.75, 9.0),  "prob": 0.5},
+            {"name": "Mięso",    "pos": (5.5, 3.0),   "prob": 0.3},
+            {"name": "Napoje",   "pos": (7.5, 8.0),   "prob": 0.4},
+            {"name": "Słodycze", "pos": (9.5, 5.0),   "prob": 0.6},
+            {"name": "Chemia",   "pos": (11.5, 9.0),  "prob": 0.2},
+            {"name": "Pieczywo", "pos": (13.5, 4.0),  "prob": 0.8},
+            {"name": "Promocja", "pos": (15.5, 13.5), "prob": 0.1}, # Rzadko odwiedzane
+        ]
     }
-
 }
