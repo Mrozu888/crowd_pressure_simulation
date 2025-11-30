@@ -14,19 +14,17 @@ class Environment:
         self.shelves = env_conf["shelves"]
         self.cash_registers = env_conf["cash_registers"]
 
-        # Ładowanie geometrii
         self.scale = env_conf["scale"]
         self.width = env_conf["width"]
         self.height = env_conf["height"]
 
-        # --- Inicjalizacja Mapy dla A* ---
         self.grid_map = GridMap(
             self.width,
             self.height,
             self.walls,
             self.shelves,
-            grid_size=0.1,  # Dokładność mapy
-            obstacle_buffer=0.3  # Bufor (promień agenta)
+            grid_size=0.1,
+            obstacle_buffer=0.3
         )
 
         self.model = SocialForceModel(sfm_conf)
@@ -37,78 +35,74 @@ class Environment:
         if "agent_generation" not in config:
             return agents
 
-        # --- ZMIANA: Pobieramy cały config generacji ---
         gen_conf = config["agent_generation"]
-
         n = gen_conf["n_agents"]
         max_spawn = gen_conf["max_spawn_time"]
 
         for _ in range(n):
             spawn_time = np.random.uniform(0, max_spawn)
 
-            # 1. Generujemy GŁÓWNE cele (Start -> Wybrane Punkty -> Kasa -> Wyjście)
-            # Przekazujemy 'gen_conf' bo tam są nasze punkty
             strategic_path = generate_shopping_path(gen_conf)
-
-            # 2. Obliczamy SZCZEGÓŁOWĄ trasę A* między tymi punktami
             detailed_path = self._calculate_full_path(strategic_path)
 
-            # Zabezpieczenie: jeśli ścieżka jest pusta (błąd A*), pomiń agenta
-            if not detailed_path:
+            if not detailed_path or len(detailed_path) < 2:
                 continue
 
+            # --- POPRAWKA: detailed_path to lista słowników ---
+            # Musimy wyciągnąć samo 'pos' dla konstruktora Agenta
+            start_pos = detailed_path[0]['pos']
+
             new_agent = Agent(
-                position=detailed_path[0],
+                position=start_pos,
                 desired_speed=speed,
                 path=detailed_path,
                 spawn_time=spawn_time
             )
 
-            # Opcjonalnie: zapisujemy główne cele do wizualizacji (niebieskie kropki)
-            new_agent.waypoints = strategic_path
+            # Opcjonalnie: zapisujemy waypoints (tylko pozycje) do wizualizacji
+            # new_agent.waypoints = [wp['pos'] for wp in strategic_path]
 
             agents.append(new_agent)
 
         return agents
 
-        # ... w klasie Environment ...
-
     def _calculate_full_path(self, waypoints):
         """
-        Łączy rzadkie punkty strategiczne gęstą ścieżką omijającą przeszkody.
-        Odporna na błędy (pomija nieosiągalne cele).
+        Łączy rzadkie punkty (słowniki) gęstą ścieżką A*.
         """
         if not waypoints or len(waypoints) < 2:
             return []
 
-        # Startujemy od pierwszego punktu
+        # Start (pierwszy punkt)
         full_path = [waypoints[0]]
 
-        # current_start to punkt, z którego aktualnie wyruszamy
-        current_start = waypoints[0]
+        current_start_pos = waypoints[0]['pos']
 
-        # Iterujemy po celach (omijając start)
-        for target in waypoints[1:]:
+        for i in range(1, len(waypoints)):
+            target_node = waypoints[i]
+            target_pos = target_node['pos']
+            target_wait = target_node.get('wait', 0.0)  # Czas jaki agent ma spędzić w TYM celu
 
-            # Próbujemy znaleźć drogę A*
-            segment = a_star_search(self.grid_map, current_start, target)
+            # A* działa na krotkach (x,y)
+            segment = a_star_search(self.grid_map, current_start_pos, target_pos)
 
-            # JEŚLI A* ZWRÓCIŁ BŁĄD (None) LUB TYLKO PUNKT KOŃCOWY (brak trasy)
             if segment is None or len(segment) < 2:
-                print(f"⚠️ Nie można dojść do celu: {target}. Pomijam go.")
-                # Nie aktualizujemy current_start, próbujemy dojść
-                # ze STAREGO startu do NASTĘPNEGO celu w kolejnej pętli
+                print(f"⚠️ Nie można dojść do celu: {target_pos}. Pomijam go.")
                 continue
 
-                # JEŚLI DROGA JEST OK:
-            # Dodajemy segment (bez pierwszego punktu, bo on już jest w full_path)
-            full_path.extend(segment[1:])
+            # Konwersja segmentu A* na format słownikowy
+            # Pomijamy pierwszy punkt (bo to start, który już mamy)
+            for j in range(1, len(segment)):
+                pos = segment[j]
 
-            # Nowym startem staje się koniec tego segmentu
-            current_start = segment[-1]
+                # Tylko OSTATNI punkt tego segmentu dziedziczy czas czekania
+                is_last_in_segment = (j == len(segment) - 1)
+                w = target_wait if is_last_in_segment else 0.0
 
-        # Zabezpieczenie: Jeśli po wszystkim mamy tylko 1 punkt (Start),
-        # to znaczy, że agent nigdzie nie może dojść. Zwróć pustą listę, żeby go nie tworzyć.
+                full_path.append({'pos': pos, 'wait': w})
+
+            current_start_pos = segment[-1]
+
         if len(full_path) < 2:
             return []
 
