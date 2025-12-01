@@ -17,33 +17,36 @@ class QueueManager:
 
     def __init__(self, env, config):
         self.env = env
-
+        self.config = config
         ag_conf = config["agent_generation"]
-        self.exit_point = np.array(ag_conf["exit_point"], dtype=np.float32)
 
-        # --- Punkty obsługi przy kasach (na wysokości y = 13.5) ---
+        # ================================
+        # 1) PUNKTY OBSŁUGI KAS – TERAZ Z CONFIG
+        # ================================
         self.cashiers = []
-        for reg in env.cash_registers:
-            x = reg["pos"][0] + reg["size"][0] / 2.0  # środek kasy w poziomie
-            y = 14
+
+        payment_points = config["environment"]["cash_payment"]
+
+        for pt in payment_points:
             self.cashiers.append({
-                "service_point": np.array((x, y), dtype=np.float32),
+                "service_point": np.array(pt, dtype=np.float32),
                 "agent": None,
-                "service_time": 0.0,
+                "service_time": 0.0
             })
 
-        # --- Punkty kolejki: 10 punktów, jeden pod drugim, co 0.75 ---
-        # Początek kolejki: (13.25, 11.5), potem w dół (zmniejszamy y)
+        # ================================
+        # 2) KOLEJKA – BEZ ZMIAN
+        # ================================
         start_x, start_y = 13.25, 11.5
         self.queue_slots = [
             np.array((start_x, start_y - 0.75 * i), dtype=np.float32)
             for i in range(10)
         ]
-        self.queue = []  # lista agentów w kolejce (0 = najbliżej kas)
+        self.queue = []
 
-        # Faza każdego agenta:
-        # "shopping", "to_queue_slot", "in_queue",
-        # "to_cashier", "at_cashier", "to_exit", "exited"
+        # ================================
+        # 3) FAZY AGENTÓW
+        # ================================
         self.agent_phase = {}
 
     # ============================================================
@@ -158,12 +161,25 @@ class QueueManager:
             agent.velocity *= 0.3
 
         elif phase == "to_exit":
-            # agent dotarł do wyjścia -> oznaczamy jako wyszedł
+
+            # Czy agent przeszedł już pierwszy punkt wyjścia?
+            if hasattr(agent, "exit_sequence"):
+                agent.exit_index += 1
+
+                # JESZCZE JEST DRUGI PUNKT?
+                if agent.exit_index < len(agent.exit_sequence):
+                    # planujemy ścieżkę do kolejnego punktu
+                    next_target = agent.exit_sequence[agent.exit_index]
+                    self._plan_path(agent, next_target)
+                    return  # nie kończymy jeszcze, agent idzie dalej
+
+            # Jeśli nie ma kolejnych punktów — agent wychodzi ze sklepu
             self.agent_phase[agent] = "exited"
             agent.exited = True
             agent.active = False
             agent.goal = None
             agent.velocity *= 0.0
+
 
     def _start_go_to_cashier(self, agent, cashier_idx):
         """Przydziela agentowi ścieżkę do danej kasy."""
@@ -181,9 +197,18 @@ class QueueManager:
             self.queue.remove(agent)
 
     def _start_exit_for(self, agent):
-        """Po zakończeniu przy kasie agent idzie do wyjścia."""
-        self._plan_path(agent, self.exit_point)
+        """Po zakończeniu przy kasie agent idzie przez sekwencję wyjścia zdefiniowaną w Config."""
+        
+        # Pobieramy sekwencję z configu
+        exit_seq = self.config["agent_generation"]["exit_sequence"]
+
+        agent.exit_sequence = exit_seq
+        agent.exit_index = 0
+
+        # Zacznij od pierwszego punktu
+        self._plan_path(agent, exit_seq[0])
         self.agent_phase[agent] = "to_exit"
+
 
     def _rebuild_queue_paths(self):
         """

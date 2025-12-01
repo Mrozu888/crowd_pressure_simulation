@@ -77,9 +77,8 @@ class SocialForceModel:
         f_people = self._force_from_people(agent, agents)
         f_walls = self._force_from_walls(agent, walls)
         f_damping = -0.2 * agent.velocity  # Simple motion resistance (friction)
-        f_cashiers = self._force_from_cashiers(agent, cashiers)
+        total_force = f_goal + f_people + f_walls + f_damping
 
-        total_force = f_goal + f_people + f_walls + f_damping + f_cashiers
         return total_force
 
     # -------------------
@@ -220,37 +219,4 @@ class SocialForceModel:
                 
         return force
     
-    def _force_from_cashiers(self, agent, cashiers):
 
-        total = np.zeros(2, dtype=float)
-
-        for reg in cashiers:
-            x, y = reg["pos"]
-            w, h = reg["size"]
-
-        # współrzędne środka kasy
-
-        # oblicz najbliższy punkt prostokąta do agenta
-            nearest_x = np.clip(agent.position[0], x, x + w)
-            nearest_y = np.clip(agent.position[1], y, y + h)
-            nearest_point = np.array([nearest_x, nearest_y], dtype=float)
-
-            d_vec = agent.position - nearest_point
-            dist = np.linalg.norm(d_vec)
-
-            if dist < 1e-6:
-                continue
-
-            n = d_vec / dist
-            overlap = agent.radius - dist
-
-        # siła eksp., jak przy ścianach
-            force = self.A_w * np.exp(overlap / self.B_w) * n
-
-        # kontakt fizyczny
-            if overlap > 0:
-                force += 200 * overlap * n
-
-            total += force
-
-        return total

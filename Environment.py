@@ -8,6 +8,7 @@ from QueueManager import QueueManager
 
 class Environment:
     def __init__(self, config):
+        self.config = config 
         env_conf = config["environment"]
         sfm_conf = config["sfm"]
 
@@ -18,7 +19,14 @@ class Environment:
         self.scale = env_conf["scale"]
         self.width = env_conf["width"]
         self.height = env_conf["height"]
-        all_obstacles = self.walls + self.shelves + self._cashier_rects_to_lines()
+
+        # Ściany + półki + obrys kas jako dodatkowe „ściany” TYLKO dla A*
+        all_obstacles = (
+            self.walls
+            + self.shelves
+            + self._cashier_rects_to_lines()
+        )
+
         self.grid_map = GridMap(
             self.width,
             self.height,
@@ -27,6 +35,7 @@ class Environment:
             grid_size=0.1,
             obstacle_buffer=0.3
         )
+
 
         self.model = SocialForceModel(sfm_conf)
         self.agents = self._create_agents(config, sfm_conf["desired_speed"])
@@ -122,16 +131,21 @@ class Environment:
         ]
     
     def _cashier_rects_to_lines(self):
-        lines = []
+        """
+        Konwertuje prostokątne kasy na 4 segmenty 'ścian' używane
+        wyłącznie przez siatkę A* (GridMap). SFM dalej widzi tylko
+        self.walls + self.shelves.
+        """
+        segments = []
         for reg in self.cash_registers:
             x, y = reg["pos"]
             w, h = reg["size"]
-        # zamieniamy prostokąt na 4 krawędzie (jak ściany)
-            lines += [
-                ((x, y), (x + w, y)),
-                ((x + w, y), (x + w, y + h)),
-                ((x + w, y + h), (x, y + h)),
-                ((x, y + h), (x, y))
-            ]
-        return lines
+
+            segments.extend([
+                ((x,         y        ), (x + w,     y        )),  # dół
+                ((x + w,     y        ), (x + w,     y + h    )),  # prawa
+                ((x + w,     y + h    ), (x,         y + h    )),  # góra
+                ((x,         y + h    ), (x,         y        )),  # lewa
+            ])
+        return segments
 

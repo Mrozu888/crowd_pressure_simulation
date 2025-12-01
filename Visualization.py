@@ -121,6 +121,7 @@ class Visualization:
     def draw(self):
         # 1. Wyczyść ekran
         self.screen.fill(self.BG_COLOR)
+        self._draw_cash_payment()
 
         # 2. Rysuj otoczenie
         if hasattr(self.env, 'walls'): self._draw_walls(self.env.walls)
@@ -140,3 +141,7 @@ class Visualization:
 
         # 5. Flip
         pygame.display.flip()
+    def _draw_cash_payment(self):
+        for pt in self.env.config["environment"]["cash_payment"]:
+            x, y = self._transform_coords(pt)
+            pygame.draw.circle(self.screen, (0,0,0), (x,y), 4)

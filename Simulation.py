@@ -42,7 +42,7 @@ class Simulation:
             if not agent.active:
                 continue  # Pomiń nieaktywnych (czekających na spawn lub tych, którzy wyszli)
 
-            force = self.env.model.compute_force(agent, self.env.agents, self.env.walls + self.env.shelves, cashiers=self.env.cash_registers,)
+            force = self.env.model.compute_force(agent, self.env.agents, self.env.walls + self.env.shelves,)
             agent.update(force, self.dt)
         if hasattr(self.env, "queue_manager"):
             self.env.queue_manager.update(self.dt)
