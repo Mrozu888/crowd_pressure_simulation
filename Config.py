@@ -103,9 +103,23 @@ CONFIG = {
         # "pos": (x, y) - gdzie agent ma podejść
         # "prob": 0.0-1.0 - szansa, że agent wybierze ten punkt
         "points_of_interest": [
-            {"name": "Warzywa",  "pos": (1.5, 6.0),   "prob": 0.9}, # Bardzo popularne
-            {"name": "Nabiał",   "pos": (3.75, 9.0),  "prob": 0.5},
-            {"name": "Mięso",    "pos": (5.5, 3.0),   "prob": 0.3},
+            {"name": "Pieczywo",  "pos": (0.75, 3.0),   "prob": 0.4}, # Bardzo popularne
+            {"name": "Pieczywo2",  "pos": (0.75, 6.0),   "prob": 0.4}, # Bardzo popularne
+            {"name": "Warzywa",   "pos": (2, 6.0),  "prob": 0.4},
+            {"name": "Warzywa2",   "pos": (2, 9.0),  "prob": 0.4},
+            {"name": "Mięso",    "pos": (0.75, 0.75),   "prob": 0.3},
+            {"name": "Mięso",    "pos": (3, 0.75),   "prob": 0.3},
+            {"name": "Mięso",    "pos": (4.5, 0.75),   "prob": 0.3},
+            {"name": "Mięso",    "pos": (6.5, 0.75),   "prob": 0.3},
+            {"name": "Mięso",    "pos": (8, 0.75),   "prob": 0.3},
+            {"name": "Mięso",    "pos": (10, 0.75),   "prob": 0.3},
+            {"name": "Mięso",    "pos": (12.5, 0.75),   "prob": 0.3},
+            {"name": "Mięso",    "pos": (13, 0.75),   "prob": 0.3},
+            {"name": "Mięso",    "pos": (15, 0.75),   "prob": 0.3},
+            {"name": "Mięso",    "pos": (17, 0.75),   "prob": 0.3},
+            {"name": "Mięso",    "pos": (18.5, 0.75),   "prob": 0.3},
+            # {"name": "Mięso",    "pos": (5.5, 3.0),   "prob": 0.3},
+            # {"name": "Mięso",    "pos": (5.5, 3.0),   "prob": 0.3},
             {"name": "Napoje",   "pos": (7.5, 8.0),   "prob": 0.4},
             {"name": "Słodycze", "pos": (9.5, 5.0),   "prob": 0.6},
             {"name": "Chemia",   "pos": (11.5, 9.0),  "prob": 0.2},
