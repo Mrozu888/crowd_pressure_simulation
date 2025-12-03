@@ -149,7 +149,7 @@ CONFIG = {
 
         "path_config": {
             "min_aisles": 1,  # Minimalna liczba alejek do odwiedzenia
-            "max_aisles": 4  # Maksymalna liczba alejek
+            "max_aisles": 4
         }
     }
 
