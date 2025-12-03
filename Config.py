@@ -1,6 +1,6 @@
 CONFIG = {
     "dt": 0.05,
-    "steps": 10000,
+    # "steps": 10000, # To już nie jest potrzebne, pętla będzie nieskończona w Main
 
     "environment": {
         "scale": 40,
@@ -20,7 +20,6 @@ CONFIG = {
         "doors": [
             ((0, 13), (0, 14.5)),
         ],
-        # Twoje półki (bez zmian)
         "shelves": [
             ((14.75, 12), (14.75, 14.85)),
             ((15, 12), (15, 14.85)),
@@ -88,43 +87,36 @@ CONFIG = {
         "tau": 0.5,
     },
 
-    # --- TUTAJ ZMIANY: RĘCZNA DEFINICJA PUNKTÓW ---
     "agent_generation": {
-        "n_agents": 20,
-        "max_spawn_time": 30.0,
+        # --- ZMIANA: Zamiast "n_agents", definiujemy częstotliwość ---
+        "spawn_rate": 0.2,  # Agenci na sekundę (np. 0.8 oznacza agenta co ok. 1.25 sekundy)
 
-        # Stałe punkty infrastruktury
-        "spawn_point": (-1.5, 14.0),     # Punkt startu poza sklepem
-        "entrance_points": [(1.7, 12.5)],   # Punkt zaraz po wejściu
-        "cashier_point": (13.5, 13.5),   # Punkt przy kasie
-        "exit_point": (10, 14.0),       # Punkt wyjścia
+        "spawn_point": (-1.5, 14.0),
+        "entrance_points": [(1.7, 12.5)],
+        "cashier_point": (13.5, 13.5),
+        "exit_point": (10, 14.0),
 
-        # Lista punktów zakupowych do wylosowania
-        # "pos": (x, y) - gdzie agent ma podejść
-        # "prob": 0.0-1.0 - szansa, że agent wybierze ten punkt
         "points_of_interest": [
-            {"name": "Pieczywo",  "pos": (0.75, 3.0),   "prob": 0.4}, # Bardzo popularne
-            {"name": "Pieczywo2",  "pos": (0.75, 6.0),   "prob": 0.4}, # Bardzo popularne
-            {"name": "Warzywa",   "pos": (2, 6.0),  "prob": 0.4},
-            {"name": "Warzywa2",   "pos": (2, 9.0),  "prob": 0.4},
-            {"name": "Mięso",    "pos": (0.75, 0.75),   "prob": 0.3},
-            {"name": "Mięso",    "pos": (3, 0.75),   "prob": 0.3},
-            {"name": "Mięso",    "pos": (4.5, 0.75),   "prob": 0.3},
-            {"name": "Mięso",    "pos": (6.5, 0.75),   "prob": 0.3},
-            {"name": "Mięso",    "pos": (8, 0.75),   "prob": 0.3},
-            {"name": "Mięso",    "pos": (10, 0.75),   "prob": 0.3},
-            {"name": "Mięso",    "pos": (12.5, 0.75),   "prob": 0.3},
-            {"name": "Mięso",    "pos": (13, 0.75),   "prob": 0.3},
-            {"name": "Mięso",    "pos": (15, 0.75),   "prob": 0.3},
-            {"name": "Mięso",    "pos": (17, 0.75),   "prob": 0.3},
-            {"name": "Mięso",    "pos": (18.5, 0.75),   "prob": 0.3},
-            # {"name": "Mięso",    "pos": (5.5, 3.0),   "prob": 0.3},
-            # {"name": "Mięso",    "pos": (5.5, 3.0),   "prob": 0.3},
-            {"name": "Napoje",   "pos": (7.5, 8.0),   "prob": 0.4},
-            {"name": "Słodycze", "pos": (9.5, 5.0),   "prob": 0.6},
-            {"name": "Chemia",   "pos": (11.5, 9.0),  "prob": 0.2},
-            {"name": "Pieczywo", "pos": (13.5, 4.0),  "prob": 0.8},
-            {"name": "Promocja", "pos": (15.5, 13.5), "prob": 0.1}, # Rzadko odwiedzane
+            {"name": "Pieczywo", "pos": (0.75, 3.0), "prob": 0.4},
+            {"name": "Pieczywo2", "pos": (0.75, 6.0), "prob": 0.4},
+            {"name": "Warzywa", "pos": (2, 6.0), "prob": 0.4},
+            {"name": "Warzywa2", "pos": (2, 9.0), "prob": 0.4},
+            {"name": "Mięso1", "pos": (0.75, 0.75), "prob": 0.3},
+            {"name": "Mięso2", "pos": (3, 0.75), "prob": 0.3},
+            {"name": "Mięso3", "pos": (4.5, 0.75), "prob": 0.3},
+            {"name": "Mięso4", "pos": (6.5, 0.75), "prob": 0.3},
+            {"name": "Mięso5", "pos": (8, 0.75), "prob": 0.3},
+            {"name": "Mięso6", "pos": (10, 0.75), "prob": 0.3},
+            {"name": "Mięso7", "pos": (12.5, 0.75), "prob": 0.3},
+            {"name": "Mięso8", "pos": (13, 0.75), "prob": 0.3},
+            {"name": "Mięso9", "pos": (15, 0.75), "prob": 0.3},
+            {"name": "Mięso10", "pos": (17, 0.75), "prob": 0.3},
+            {"name": "Mięso11", "pos": (18.5, 0.75), "prob": 0.3},
+            {"name": "Napoje", "pos": (7.5, 8.0), "prob": 0.4},
+            {"name": "Słodycze", "pos": (9.5, 5.0), "prob": 0.6},
+            {"name": "Chemia", "pos": (11.5, 9.0), "prob": 0.2},
+            {"name": "Pieczywo", "pos": (13.5, 4.0), "prob": 0.8},
+            {"name": "Promocja", "pos": (15.5, 13.5), "prob": 0.1},
         ]
     }
 }
