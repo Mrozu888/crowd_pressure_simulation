@@ -42,10 +42,10 @@ class SocialForceModel:
             Higher B/B_w values create longer-range repulsion effects.
             Typical desired_speed ≈ 1.2 m/s represents normal walking speed.
         """
-        self.A = params.get("A", 2.0)          # Agent-agent repulsion intensity
-        self.B = params.get("B", 0.5)          # Agent-agent repulsion range
+        self.A = params.get("A", 1.0)          # Agent-agent repulsion intensity
+        self.B = params.get("B", 0.1)          # Agent-agent repulsion range
         self.A_w = params.get("A_w", 10.0)     # Agent-wall repulsion intensity
-        self.B_w = params.get("B_w", 0.2)      # Agent-wall repulsion range
+        self.B_w = params.get("B_w", 0.1)      # Agent-wall repulsion range
         self.desired_speed = params.get("desired_speed", 1.2)  # m/s
         self.relax_time = params.get("tau", 0.5)  # Agent reaction time
 
@@ -112,51 +112,41 @@ class SocialForceModel:
     def _force_from_people(self, agent, agents):
         """
         Compute repulsive forces from other agents using Helbing's model.
-        
-        Uses an exponential decay function to model personal space:
-            F_repulsive = A * exp(overlap / B) * direction
-        
-        Plus a physical contact force when agents actually overlap.
-        
-        Args:
-            agent (Agent): The agent experiencing the forces
-            agents (list): Other agents generating repulsive forces
-            
-        Returns:
-            np.array: Cumulative repulsive force from all other agents
-            
-        Calculation Details:
-            - d_vec: Vector from other agent to current agent
-            - dist: Distance between agent centers
-            - n_ij: Normalized direction vector between agents
-            - overlap: Degree of personal space violation (positive = penetration)
-            
-        The exponential term creates strong short-range repulsion that
-        grows rapidly as distance decreases.
+
+        ... (reszta docstringa) ...
         """
         force = np.zeros(2)
         for other in agents:
             if other is agent:
                 continue  # Skip self
-                
+
+            # --- DODANA LINIA ---
+            # Ignoruj agentów, którzy nie są aktywni (czekają na spawn lub wyszli)
+            # To jest kluczowe, aby zapobiec "eksplozji" sił w strefie spawnu.
+            if not other.active:
+                continue
+            # --- KONIEC DODANEJ LINII ---
+
             # Calculate distance and direction to other agent
             d_vec = agent.position - other.position
             dist = np.linalg.norm(d_vec)
             if dist == 0:
-                continue  # Avoid division by zero for coincident agents
-                
+                # Jeśli jakimś cudem są w tym samym punkcie, lekko ich rozsuń
+                d_vec = np.random.rand(2) * 0.01
+                dist = np.linalg.norm(d_vec)
+
             n_ij = d_vec / dist  # Normalized direction vector
-            
+
             # Calculate overlap of personal spaces
             overlap = agent.radius + other.radius - dist
-            
+
             # Exponential repulsion force (social force)
             force += self.A * np.exp(overlap / self.B) * n_ij
-            
+
             # Physical contact force when agents actually overlap
             if overlap > 0:
                 force += 200 * overlap * n_ij  # "Body force" during collision
-                
+
         return force
 
     def _force_from_walls(self, agent, walls):
@@ -185,6 +175,7 @@ class SocialForceModel:
             since people prefer to maintain more distance from fixed obstacles.
         """
         force = np.zeros(2)
+
         for (p1, p2) in walls:
             # Convert to numpy arrays and get wall vector
             wall_vec = np.array(p2) - np.array(p1)
