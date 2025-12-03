@@ -151,9 +151,25 @@ class QueueManager:
     def _on_reached_destination(self, agent, phase):
         """Reakcja na zakończenie ścieżki zależnie od fazy."""
         if phase == "to_queue_slot":
-            # agent stoi w kolejce
+            # agent stoi w kolejce – trzymamy go przy jego slocie
             self.agent_phase[agent] = "in_queue"
-            agent.goal = None
+
+            # wyznacz slot na podstawie miejsca agenta w kolejce
+            if agent in self.queue:
+                idx = self.queue.index(agent)
+                slot_index = min(idx, len(self.queue_slots) - 1)
+                slot_pos = self.queue_slots[slot_index]
+            else:
+                # awaryjnie: jakby nie był w self.queue, trzymaj go tam, gdzie jest
+                slot_pos = agent.position.copy()
+
+            # NIE używamy już ścieżki – tylko stały goal na slot
+            agent.path = None
+            agent.path_index = 0
+            agent.finished_path = False
+            agent.goal = np.array(slot_pos, dtype=np.float32)
+
+            # lekkie wygaszenie prędkości
             agent.velocity *= 0.3
 
         elif phase == "to_cashier":
