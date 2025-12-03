@@ -53,22 +53,27 @@ class QueueManager:
     # Pomocnicze: planowanie ścieżek A*
     # ============================================================
 
-    def _plan_path(self, agent, target_pos):
-        """Planuje nową ścieżkę A* dla agenta do podanego punktu."""
+    def _plan_path(self, agent, target_pos, wait_at_end=0.0):
+        """Planuje nową ścieżkę A* dla agenta do podanego punktu.
+        Ostatni punkt może mieć czas czekania wait_at_end.
+        """
         start = tuple(agent.position)
         end = tuple(target_pos)
 
         segment = a_star_search(self.env.grid_map, start, end)
 
         if segment is None or len(segment) == 0:
-            # awaryjnie: prosta dwupunktowa ścieżka (może przecinać przeszkody)
             segment = [start, end]
 
-        # Konwersja do formatu listy słowników {'pos': (x,y), 'wait': 0.0}
-        agent.path = [{'pos': p, 'wait': 0.0} for p in segment]
+        agent.path = []
+        for i, p in enumerate(segment):
+            w = wait_at_end if i == len(segment) - 1 else 0.0
+            agent.path.append({'pos': p, 'wait': w})
+
         agent.path_index = 0
         agent.goal = np.array(agent.path[0]['pos'], dtype=np.float32)
         agent.finished_path = False
+
 
     # ============================================================
     # Główna logika kolejek
@@ -79,6 +84,7 @@ class QueueManager:
         Aktualizuje stany agentów względem kolejek / kas / wyjścia.
         Wywoływana raz na krok symulacji z Simulation.update().
         """
+
         # 1. Wykryj agentów, którzy skończyli zakupy
         for agent in self.env.agents:
             if not agent.active or getattr(agent, "exited", False):
@@ -98,22 +104,13 @@ class QueueManager:
             if phase in ("to_queue_slot", "to_cashier", "to_exit") and getattr(agent, "finished_path", False):
                 self._on_reached_destination(agent, phase)
 
-        # 3. Obsłuż czas przy kasach i zwalnianie kas
-        for idx, cashier in enumerate(self.cashiers):
-            ag = cashier["agent"]
-            if ag is not None and self.agent_phase.get(ag) == "at_cashier":
-                cashier["service_time"] -= dt
-                if cashier["service_time"] <= 0.0:
-                    # Agent skończył przy kasie -> idzie do wyjścia
-                    self._start_exit_for(ag)
-                    cashier["agent"] = None
-
-        # 4. Wolne kasy pobierają agentów z kolejki
+        # 3. Wolne kasy pobierają agentów z kolejki
         for idx, cashier in enumerate(self.cashiers):
             if cashier["agent"] is None and self.queue:
                 ag = self.queue.pop(0)
                 self._start_go_to_cashier(ag, idx)
                 self._rebuild_queue_paths()
+
 
     # ============================================================
     # Etapy: po zakończeniu zakupów
@@ -145,6 +142,11 @@ class QueueManager:
     # ============================================================
     # Etapy: przejścia między stanami
     # ============================================================
+    def _cashier_index_of(self, agent):
+        for i, cashier in enumerate(self.cashiers):
+            if cashier["agent"] is agent:
+                return i
+        return None
 
     def _on_reached_destination(self, agent, phase):
         """Reakcja na zakończenie ścieżki zależnie od fazy."""
@@ -155,10 +157,15 @@ class QueueManager:
             agent.velocity *= 0.3
 
         elif phase == "to_cashier":
-            # agent dotarł do kasy -> zaczyna być obsługiwany
-            self.agent_phase[agent] = "at_cashier"
-            agent.goal = None
-            agent.velocity *= 0.3
+            # Agent ZAKOŃCZYŁ ścieżkę do kasy + czekanie (bo wait_at_end już zadziałał)
+            idx = self._cashier_index_of(agent)
+            if idx is not None:
+                self.cashiers[idx]["agent"] = None  # zwolnij kasę
+
+            # start sekwencji wyjścia
+            self._start_exit_for(agent)
+
+
 
         elif phase == "to_exit":
 
@@ -182,32 +189,50 @@ class QueueManager:
 
 
     def _start_go_to_cashier(self, agent, cashier_idx):
-        """Przydziela agentowi ścieżkę do danej kasy."""
+        """Przydziela agentowi ścieżkę do danej kasy + czas czekania na końcu."""
         cashier = self.cashiers[cashier_idx]
         service_point = cashier["service_point"]
 
-        self._plan_path(agent, service_point)
-        self.agent_phase[agent] = "to_cashier"
-
+        service_time = random.uniform(3.0, 7.0)
         cashier["agent"] = agent
-        cashier["service_time"] = random.uniform(3.0, 7.0)
+        cashier["service_time"] = service_time
+
+        # OSTATNI punkt ścieżki ma wait = service_time
+        self._plan_path(agent, service_point, wait_at_end=service_time)
+        self.agent_phase[agent] = "to_cashier"
 
         # Agent na pewno nie jest już w kolejce
         if agent in self.queue:
             self.queue.remove(agent)
 
-    def _start_exit_for(self, agent):
-        """Po zakończeniu przy kasie agent idzie przez sekwencję wyjścia zdefiniowaną w Config."""
-        
-        # Pobieramy sekwencję z configu
-        exit_seq = self.config["agent_generation"]["exit_sequence"]
 
-        agent.exit_sequence = exit_seq
+    def _start_exit_for(self, agent):
+        """
+        Po zakończeniu stania przy kasie agent idzie do wyjścia
+        (punkty zdefiniowane w Config.py -> agent_generation.exit_sequence).
+        """
+
+        ag_conf = self.config["agent_generation"]
+        exit_sequence = ag_conf["exit_sequence"]
+
+        # --- KLUCZOWE: odblokowanie agenta ---
+        agent.is_waiting = False
+        agent.wait_timer = 0.0
+        agent.finished_path = False  # nowa ścieżka, więc resetujemy flagę
+
+        # wyczyść starą ścieżkę, na wszelki wypadek
+        agent.path = None
+        agent.path_index = 0
+        agent.goal = None
+
+        # zapamiętaj sekwencję wyjścia
+        agent.exit_sequence = exit_sequence
         agent.exit_index = 0
 
-        # Zacznij od pierwszego punktu
-        self._plan_path(agent, exit_seq[0])
+        # zaplanuj ścieżkę do pierwszego punktu wyjścia
+        self._plan_path(agent, exit_sequence[0])
         self.agent_phase[agent] = "to_exit"
+
 
 
     def _rebuild_queue_paths(self):

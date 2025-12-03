@@ -27,7 +27,6 @@ def main():
     env = Environment(CONFIG)      # Physical environment with agents and obstacles
     sim = Simulation(env, CONFIG)  # Simulation controller for time evolution
     vis = Visualization(env)       # Visual rendering system
-
     # Main simulation loop control flag
     running = True
     
@@ -44,7 +43,6 @@ def main():
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     running = False  # Quit on ESC key
-
         # --------------------
         # SIMULATION UPDATE PHASE
         # --------------------
@@ -59,7 +57,6 @@ def main():
         vis.draw()    # Render current simulation state to screen
                       # - Draws walls, doors, and agents
                       # - Updates display
-
         # --------------------
         # FRAME RATE CONTROL
         # --------------------

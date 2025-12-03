@@ -71,6 +71,10 @@ class SocialForceModel:
             All forces are summed linearly. The damping force prevents
             velocity oscillations and provides more realistic movement.
         """
+        # jeśli agent stoi przy kasie -> zero sił
+        if getattr(agent, "is_waiting", False):
+            return np.zeros(2, dtype=float)
+
         if cashiers is None:
             cashiers = []
         f_goal = self._force_to_goal(agent)

@@ -7,8 +7,9 @@ python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
-
-
+windows:
+venv\Scripts\activate
+python main.py
 ### To start:
 ```bash
 python3 main.py

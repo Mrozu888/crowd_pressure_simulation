@@ -33,7 +33,7 @@ class Environment:
             all_obstacles,
             [],
             grid_size=0.1,
-            obstacle_buffer=0.3
+            obstacle_buffer=0.15
         )
 
 
