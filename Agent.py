@@ -2,8 +2,13 @@ import numpy as np
 
 
 class Agent:
+    # Simple incremental ID so each agent can be uniquely identified (useful for statistics/logging)
+    _next_id = 0
 
     def __init__(self, position, goal=None, desired_speed=1.3, radius=0.2, path=None, spawn_time=0.0):
+        # Unique identifier for this agent
+        self.id = Agent._next_id
+        Agent._next_id += 1
 
         self.position = np.array(position, dtype=np.float32)
         self.velocity = np.zeros(2)

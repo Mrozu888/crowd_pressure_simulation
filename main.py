@@ -4,6 +4,12 @@ from Environment import Environment
 from Simulation import Simulation
 from Visualization import Visualization
 
+# NEW: statistics imports
+from stats.geometry import StatsGeometry
+from stats.manager import StatsManager
+from stats.writer import StatsCSVWriter
+from stats.hud import StatsHUD
+
 
 def main():
     """
@@ -26,8 +32,18 @@ def main():
     # Initialize core simulation components
     env = Environment(CONFIG)      # Physical environment with agents and obstacles
     sim = Simulation(env, CONFIG)  # Simulation controller for time evolution
-    vis = Visualization(env)       # Visual rendering system
 
+    # NEW: statistics setup
+    geom = StatsGeometry()
+    writer = StatsCSVWriter(".")
+    stats = StatsManager(geom, writer, covid_dist=CONFIG.get("covid_dist", 1.7))
+    hud_font = pygame.font.SysFont("consolas", 14)
+    hud = StatsHUD(stats, font=hud_font, pos=(10, 10))
+
+    # NOTE: pass 'stats' into Visualization so it can color agents by crowding
+    vis = Visualization(env, stats)       # Visual rendering system
+
+    
     # Main simulation loop control flag
     running = True
     
@@ -53,12 +69,26 @@ def main():
                       # - Applies social forces
                       # - Removes exited agents
 
+        # NEW: statistics update.
+        dt = CONFIG.get("simulation", {}).get("dt", 0.033)
+        stats.update(dt, env.agents)
+
         # --------------------
         # RENDERING PHASE
         # --------------------
         vis.draw()    # Render current simulation state to screen
                       # - Draws walls, doors, and agents
                       # - Updates display
+
+        # NEW: HUD overlay (draw on the same screen)
+        try:
+            surface = vis.screen
+            hud.draw(surface)
+            pygame.display.flip()
+        except AttributeError:
+            # If Visualization already calls display.flip() internally and does
+            # not expose 'screen', integrate HUD drawing inside Visualization.
+            pass
 
         # --------------------
         # FRAME RATE CONTROL
@@ -67,6 +97,7 @@ def main():
                         # This regulates simulation speed for consistent visualization
 
     # Cleanup PyGame resources when simulation ends
+    stats.close()
     pygame.quit()
 
 if __name__ == "__main__":
