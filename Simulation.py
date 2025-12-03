@@ -40,12 +40,21 @@ class Simulation:
         # Krok 2: Zaktualizuj wszystkich AKTYWNYCH agentów (były krok 1)
         for agent in self.env.agents:
             if not agent.active:
-                continue  # Pomiń nieaktywnych (czekających na spawn lub tych, którzy wyszli)
+                continue  # Pomiń nieaktywnych
 
-            force = self.env.model.compute_force(agent, self.env.agents, self.env.walls + self.env.shelves,)
+            force = self.env.model.compute_force(
+                agent,
+                self.env.agents,
+                self.env.walls + self.env.shelves,
+            )
             agent.update(force, self.dt)
+
+            # TWARDY KOLIDER NA KASACH – BEZ SIŁ
+            self.env.keep_agent_out_of_cashiers(agent)
+
         if hasattr(self.env, "queue_manager"):
             self.env.queue_manager.update(self.dt)
+
         # Krok 3: Usuń agentów, którzy wyszli (były krok 2)
         self.env.remove_exited_agents()
 

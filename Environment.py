@@ -149,3 +149,42 @@ class Environment:
             ])
         return segments
 
+    def keep_agent_out_of_cashiers(self, agent):
+        """
+        Twarda blokada: jeśli agent nachodzi na prostokąt kasy,
+        przesuwamy go na krawędź kasy (bez użycia sił SFM).
+        """
+        for reg in self.cash_registers:
+            x, y = reg["pos"]
+            w, h = reg["size"]
+
+            # najbliższy punkt prostokąta kasy do środka agenta
+            nearest_x = np.clip(agent.position[0], x, x + w)
+            nearest_y = np.clip(agent.position[1], y, y + h)
+            nearest = np.array([nearest_x, nearest_y], dtype=np.float32)
+
+            d_vec = agent.position - nearest
+            dist = np.linalg.norm(d_vec)
+
+            # jeśli środek agenta jest w zasięgu promienia od krawędzi kasy
+            if dist < agent.radius:
+                if dist < 1e-6:
+                    # awaryjnie – wypchnięcie od środka prostokąta
+                    center = np.array([x + w / 2.0, y + h / 2.0], dtype=np.float32)
+                    d_vec = agent.position - center
+                    norm = np.linalg.norm(d_vec)
+                    if norm < 1e-6:
+                        n = np.array([1.0, 0.0], dtype=np.float32)
+                    else:
+                        n = d_vec / norm
+                else:
+                    n = d_vec / dist
+
+                penetration = agent.radius - dist
+                # przesuń na zewnątrz
+                agent.position += n * penetration
+
+                # usuń składową prędkości skierowaną do środka kasy
+                vn = np.dot(agent.velocity, n)
+                if vn < 0:
+                    agent.velocity -= vn * n
