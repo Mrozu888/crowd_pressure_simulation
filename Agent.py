@@ -2,8 +2,13 @@ import numpy as np
 
 
 class Agent:
+    # Simple incremental ID so each agent can be uniquely identified (useful for statistics/logging)
+    _next_id = 0
 
     def __init__(self, position, goal=None, desired_speed=1.3, radius=0.2, path=None, spawn_time=0.0):
+        # Unique identifier for this agent
+        self.id = Agent._next_id
+        Agent._next_id += 1
 
         self.position = np.array(position, dtype=np.float32)
         self.velocity = np.zeros(2)
@@ -13,10 +18,13 @@ class Agent:
         self.spawn_time = spawn_time
         self.active = (self.spawn_time <= 0.0)
 
+        # --- NOWE: Zmienne do czekania ---
         self.is_waiting = False
         self.wait_timer = 0.0
-        self.finished_path = False 
-        self.exited = False     
+        # ---------------------------------
+        self.finished_path = False
+        self.exited = False
+
         if path is not None:
             # path to teraz lista słowników [{'pos': (x,y), 'wait': czas}, ...]
             self.path = path
@@ -38,7 +46,7 @@ class Agent:
         norm = np.linalg.norm(dir_vec)
         return dir_vec / norm if norm > 1e-6 else np.zeros(2)
 
-    def advance_path(self, threshold=0.4):  # Zwiększyłem lekko threshold
+    def advance_path(self, threshold=0.5):  # Zwiększyłem lekko threshold
         """
         Check if agent reached current waypoint and move to next one.
         Handles waiting time.
