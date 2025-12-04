@@ -8,7 +8,7 @@ from QueueManager import QueueManager
 
 class Environment:
     def __init__(self, config):
-        self.config = config 
+        self.config = config
         env_conf = config["environment"]
         sfm_conf = config["sfm"]
 
@@ -20,7 +20,6 @@ class Environment:
         self.width = env_conf["width"]
         self.height = env_conf["height"]
 
-        # Ściany + półki + obrys kas jako dodatkowe „ściany” TYLKO dla A*
         all_obstacles = (
             self.walls
             + self.shelves
@@ -30,71 +29,71 @@ class Environment:
         self.grid_map = GridMap(
             self.width,
             self.height,
-            all_obstacles,
-            [],
+            all_obstacles,   # jako „walls”
+            [],              # osobno „shelves” – nie używane, więc puste
             grid_size=0.1,
             obstacle_buffer=0.15
         )
 
-
+        # Model sił społecznych
         self.model = SocialForceModel(sfm_conf)
-        self.agents = self._create_agents(config, sfm_conf["desired_speed"])
-        self.model = SocialForceModel(sfm_conf)
-        self.agents = self._create_agents(config, sfm_conf["desired_speed"])
 
-        # Menedżer kolejek do kas
+        # KONFIGURACJA GENEROWANIA AGENTÓW (jak w master)
+        self.gen_conf = config["agent_generation"]
+        self.agent_speed = sfm_conf["desired_speed"]
+
+        # Na starcie brak agentów – będą się respić w trakcie
+        self.agents = []
+
+        # Menedżer kolejek do kas (z gałęzi „kolejki”)
         self.queue_manager = QueueManager(self, config)
 
-    def _create_agents(self, config, speed):
-        agents = []
-        if "agent_generation" not in config:
-            return agents
+    def spawn_agent(self):
+        """
+        Tworzy i dodaje jednego nowego agenta:
+        - generujemy ścieżkę zakupową (punkty POI),
+        - rozwijamy ją do gęstego pathu A* (jak wcześniej w _create_agents),
+        - agent startuje od razu (spawn_time=0, active=True).
+        """
 
-        gen_conf = config["agent_generation"]
-        n = gen_conf["n_agents"]
-        max_spawn = gen_conf["max_spawn_time"]
+        # 1. Punkty strategiczne (spawn -> wejście -> półki)
+        strategic_path = generate_shopping_path(self.gen_conf)
 
-        for _ in range(n):
-            spawn_time = np.random.uniform(0, max_spawn)
+        # 2. Rozwinięcie do pełnej ścieżki A* z czasami „wait”
+        detailed_path = self._calculate_full_path(strategic_path)
 
-            strategic_path = generate_shopping_path(gen_conf)
-            detailed_path = self._calculate_full_path(strategic_path)
+        if not detailed_path or len(detailed_path) < 2:
+            # Nie udało się wyznaczyć sensownej ścieżki – pomijamy
+            return
 
-            if not detailed_path or len(detailed_path) < 2:
-                continue
+        # 3. Pozycja startowa = pierwszy punkt ścieżki
+        start_pos = detailed_path[0]['pos']
 
-            # detailed_path to lista słowników 
-            start_pos = detailed_path[0]['pos']
+        new_agent = Agent(
+            position=start_pos,
+            desired_speed=self.agent_speed,
+            path=detailed_path,
+            spawn_time=0.0  # aktywny od razu
+        )
 
-            new_agent = Agent(
-                position=start_pos,
-                desired_speed=speed,
-                path=detailed_path,
-                spawn_time=spawn_time
-            )
-
-            agents.append(new_agent)
-
-        return agents
+        self.agents.append(new_agent)
 
     def _calculate_full_path(self, waypoints):
         """
         Łączy rzadkie punkty (słowniki) gęstą ścieżką A*.
+        waypoints: [{'pos': (x,y), 'wait': t}, ...]
         """
         if not waypoints or len(waypoints) < 2:
             return []
 
-        # Start (pierwszy punkt)
         full_path = [waypoints[0]]
-
         current_start_pos = waypoints[0]['pos']
 
         for i in range(1, len(waypoints)):
             target_node = waypoints[i]
             target_pos = target_node['pos']
-            target_wait = target_node.get('wait', 0.0)  # Czas jaki agent ma spędzić w TYM celu
+            target_wait = target_node.get('wait', 0.0)
 
-            # A* działa na krotkach (x,y)
             segment = a_star_search(self.grid_map, current_start_pos, target_pos)
 
             if segment is None or len(segment) < 2:
@@ -103,10 +102,8 @@ class Environment:
 
             for j in range(1, len(segment)):
                 pos = segment[j]
-
                 is_last_in_segment = (j == len(segment) - 1)
                 w = target_wait if is_last_in_segment else 0.0
-
                 full_path.append({'pos': pos, 'wait': w})
 
             current_start_pos = segment[-1]
@@ -122,12 +119,11 @@ class Environment:
             agent for agent in self.agents
             if not getattr(agent, "exited", False)
         ]
-    
+
     def _cashier_rects_to_lines(self):
         """
         Konwertuje prostokątne kasy na 4 segmenty 'ścian' używane
-        wyłącznie przez siatkę A* (GridMap). SFM dalej widzi tylko
-        self.walls + self.shelves.
+        wyłącznie przez siatkę A* (GridMap). SFM widzi tylko walls + shelves.
         """
         segments = []
         for reg in self.cash_registers:
@@ -151,7 +147,6 @@ class Environment:
             x, y = reg["pos"]
             w, h = reg["size"]
 
-            # najbliższy punkt prostokąta kasy do środka agenta
             nearest_x = np.clip(agent.position[0], x, x + w)
             nearest_y = np.clip(agent.position[1], y, y + h)
             nearest = np.array([nearest_x, nearest_y], dtype=np.float32)
@@ -159,10 +154,8 @@ class Environment:
             d_vec = agent.position - nearest
             dist = np.linalg.norm(d_vec)
 
-            # jeśli środek agenta jest w zasięgu promienia od krawędzi kasy
             if dist < agent.radius:
                 if dist < 1e-6:
-                    # awaryjnie – wypchnięcie od środka prostokąta
                     center = np.array([x + w / 2.0, y + h / 2.0], dtype=np.float32)
                     d_vec = agent.position - center
                     norm = np.linalg.norm(d_vec)
@@ -174,10 +167,8 @@ class Environment:
                     n = d_vec / dist
 
                 penetration = agent.radius - dist
-                # przesuń na zewnątrz
                 agent.position += n * penetration
 
-                # usuń składową prędkości skierowaną do środka kasy
                 vn = np.dot(agent.velocity, n)
                 if vn < 0:
                     agent.velocity -= vn * n

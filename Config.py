@@ -127,6 +127,7 @@ CONFIG = {
     },
 
     "agent_generation": {
+        "spawn_rate": 0.2,
         "n_agents": 20,
         "max_spawn_time": 30.0,
 

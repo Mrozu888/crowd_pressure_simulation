@@ -1,1 +1,0 @@
-agent_id,kind,spawned_at,first_in_vestibule,first_in_store,last_in_vestibule,last_in_store,time_to_enter_store,time_in_store,time_in_vestibule,total_idle_time,total_queue_time,total_distance,covid_compliant
