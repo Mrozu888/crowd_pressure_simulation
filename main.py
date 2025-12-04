@@ -4,6 +4,12 @@ from Environment import Environment
 from Simulation import Simulation
 from Visualization import Visualization
 
+# NEW: statistics imports
+from stats.geometry import StatsGeometry
+from stats.manager import StatsManager
+from stats.writer import StatsCSVWriter
+from stats.hud import StatsHUD
+
 
 def main():
     """
@@ -22,7 +28,16 @@ def main():
     # Inicjalizacja komponentów
     env = Environment(CONFIG)
     sim = Simulation(env, CONFIG)
-    vis = Visualization(env)
+
+    # NEW: statistics setup
+    geom = StatsGeometry()
+    writer = StatsCSVWriter(".")
+    stats = StatsManager(geom, writer, covid_dist=CONFIG.get("covid_dist", 1.7))
+    hud_font = pygame.font.SysFont("consolas", 14)
+    hud = StatsHUD(stats, font=hud_font, pos=(10, 40))
+
+    # Visualization now optionally receives stats manager
+    vis = Visualization(env, stats)
 
     running = True
     paused = False
@@ -53,36 +68,52 @@ def main():
                 # Przyspieszanie (Klawisz '=' to standardowy plus, K_KP_PLUS to numeryczny)
                 elif event.key == pygame.K_EQUALS or event.key == pygame.K_KP_PLUS:
                     target_fps += 10
-                    if target_fps > 300: target_fps = 300  # Limit max
+                    if target_fps > 300:
+                        target_fps = 300  # Limit max
                     print(f"Prędkość zwiększona: {target_fps} FPS")
 
                 # Zwalnianie
                 elif event.key == pygame.K_MINUS or event.key == pygame.K_KP_MINUS:
                     target_fps -= 10
-                    if target_fps < 10: target_fps = 10  # Limit min
+                    if target_fps < 10:
+                        target_fps = 10  # Limit min
                     print(f"Prędkość zmniejszona: {target_fps} FPS")
 
-
         if not paused:
+            # Aktualizacja symulacji
             sim.update()
 
+            # NEW: statistics update (dt zgodne z konfiguracją symulacji)
+            dt = CONFIG.get("simulation", {}).get("dt", 0.033)
+            stats.update(dt, env.agents)
 
+        # Rysowanie sceny (otoczenie + agenci)
         vis.draw()
 
         # Rysowanie informacji o prędkości na ekranie
         fps_text = f"Speed (FPS): {target_fps}"
-        if paused: fps_text += " [PAUZA]"
+        if paused:
+            fps_text += " [PAUZA]"
 
         # Tworzenie napisu (kolor czarny)
         text_surface = font.render(fps_text, True, (0, 0, 0))
         # Wyświetlenie w lewym górnym rogu (10, 10)
         vis.screen.blit(text_surface, (10, 10))
 
-        # Konieczne odświeżenie ekranu po dodaniu napisu
+        # NEW: HUD ze statystykami (na tym samym ekranie)
+        hud.draw(vis.screen)
+
+        # Konieczne odświeżenie ekranu po dodaniu napisu/HUD
         pygame.display.flip()
 
+        # --------------------
+        # 4. KONTROLA CZASU
+        # --------------------
+        # Tutaj używamy naszej zmiennej target_fps
         clock.tick(target_fps)
 
+    # Zamknięcie plików statystyk
+    stats.close()
     pygame.quit()
 
 
