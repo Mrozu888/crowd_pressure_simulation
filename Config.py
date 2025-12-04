@@ -144,14 +144,45 @@ CONFIG = {
         # "pos": (x, y) - gdzie agent ma podejść
         # "prob": 0.0-1.0 - szansa, że agent wybierze ten punkt
         "points_of_interest": [
-            {"name": "Warzywa",  "pos": (1.5, 6.0),   "prob": 0.9}, # Bardzo popularne
-            {"name": "Nabiał",   "pos": (3.75, 9.0),  "prob": 0.5},
-            {"name": "Mięso",    "pos": (5.5, 3.0),   "prob": 0.3},
-            {"name": "Napoje",   "pos": (7.5, 8.0),   "prob": 0.4},
-            {"name": "Słodycze", "pos": (9.5, 5.0),   "prob": 0.6},
-            {"name": "Chemia",   "pos": (11.5, 9.0),  "prob": 0.2},
-            {"name": "Pieczywo", "pos": (13.5, 4.0),  "prob": 0.8},
-            {"name": "Promocja", "pos": (15.5, 13.5), "prob": 0.1}, # Rzadko odwiedzane
+            {"name": "Pieczywo", "pos": (0.75, 3.0), "prob": 0.4},
+            {"name": "Pieczywo2", "pos": (0.75, 6.0), "prob": 0.4},
+            {"name": "Warzywa", "pos": (2, 6.0), "prob": 0.4},
+            {"name": "Warzywa2", "pos": (2, 9.0), "prob": 0.4},
+            {"name": "Mięso1", "pos": (0.75, 0.75), "prob": 0.3},
+            {"name": "Mięso2", "pos": (3, 0.75), "prob": 0.3},
+            {"name": "Mięso3", "pos": (4.5, 0.75), "prob": 0.3},
+            {"name": "Mięso4", "pos": (6.5, 0.75), "prob": 0.3},
+            {"name": "Mięso5", "pos": (8, 0.75), "prob": 0.3},
+            {"name": "Mięso6", "pos": (10, 0.75), "prob": 0.3},
+            {"name": "Mięso7", "pos": (12.5, 0.75), "prob": 0.3},
+            {"name": "Mięso8", "pos": (13, 0.75), "prob": 0.3},
+            {"name": "Mięso9", "pos": (15, 0.75), "prob": 0.3},
+            {"name": "Mięso10", "pos": (17, 0.75), "prob": 0.3},
+            {"name": "Mięso11", "pos": (18.5, 0.75), "prob": 0.3},
+
+            {"name": "Słodycze", "pos": (4, 5.0), "prob": 0.1},
+            {"name": "Słodycze2", "pos": (6, 5.0), "prob": 0.4},
+            {"name": "Słodycze3", "pos": (6, 8.0), "prob": 0.3},
+            {"name": "Słodycze4", "pos": (5.5, 2.0), "prob": 0.4},
+            {"name": "Słodycze5", "pos": (5.5, 9.0), "prob": 0.3},
+            {"name": "Słodycze6", "pos": (9.5, 5.0), "prob": 0.6},
+
+            {"name": "Chemia", "pos": (11.5, 9.0), "prob": 0.2},
+            {"name": "Chemia", "pos": (11, 7.0), "prob": 0.2},
+            {"name": "Chemia", "pos": (10.5, 4.0), "prob": 0.2},
+            {"name": "Chemia", "pos": (11.5, 3.0), "prob": 0.2},
+            {"name": "Napoje", "pos": (7.5, 8.0), "prob": 0.4},
+
+            {"name": "Pieczywo", "pos": (13.5, 4.0), "prob": 0.8},
+            {"name": "Promocja", "pos": (17.5, 13.5), "prob": 0.3},
+            {"name": "Promocja", "pos": (18.5, 4), "prob": 0.2},
+            {"name": "Promocja", "pos": (18.5, 5.5), "prob": 0.4},
+            {"name": "Promocja", "pos": (17.5, 6), "prob": 0.2},
+            {"name": "Promocja", "pos": (17.5, 8), "prob": 0.2},
+            {"name": "Promocja", "pos": (18.5, 10), "prob": 0.3},
+            {"name": "Promocja", "pos": (17.5, 10), "prob": 0.3},
+
+
         ]
     }
 }
