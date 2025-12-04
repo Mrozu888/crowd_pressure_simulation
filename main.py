@@ -37,7 +37,6 @@ def main():
     print("  SPACJA- Pauza")
     print("  + / - - Przyspiesz / Zwolnij")
 
-
     while running:
 
         for event in pygame.event.get():
@@ -82,10 +81,6 @@ def main():
         # Konieczne odświeżenie ekranu po dodaniu napisu
         pygame.display.flip()
 
-        # --------------------
-        # 4. KONTROLA CZASU
-        # --------------------
-        # Tutaj używamy naszej zmiennej target_fps
         clock.tick(target_fps)
 
     pygame.quit()

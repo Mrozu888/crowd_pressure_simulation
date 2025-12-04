@@ -38,7 +38,7 @@ class Agent:
         norm = np.linalg.norm(dir_vec)
         return dir_vec / norm if norm > 1e-6 else np.zeros(2)
 
-    def advance_path(self, threshold=0.5):  # Zwiększyłem lekko threshold
+    def advance_path(self, threshold=0.4):  # Zwiększyłem lekko threshold
         """
         Check if agent reached current waypoint and move to next one.
         Handles waiting time.
