@@ -20,9 +20,7 @@ class QueueManager:
         self.config = config
         ag_conf = config["agent_generation"]
 
-        # ================================
-        # 1) PUNKTY OBSŁUGI KAS – TERAZ Z CONFIG
-        # ================================
+        # PUNKTY OBSŁUGI KAS 
         self.cashiers = []
 
         payment_points = config["environment"]["cash_payment"]
@@ -34,9 +32,8 @@ class QueueManager:
                 "service_time": 0.0
             })
 
-        # ================================
-        # 2) KOLEJKA – BEZ ZMIAN
-        # ================================
+        # KOLEJKA
+
         start_x, start_y = 13.25, 11.5
         self.queue_slots = [
             np.array((start_x, start_y - 0.75 * i), dtype=np.float32)
@@ -44,14 +41,10 @@ class QueueManager:
         ]
         self.queue = []
 
-        # ================================
-        # 3) FAZY AGENTÓW
-        # ================================
+        # FAZY AGENTÓW
         self.agent_phase = {}
 
-    # ============================================================
     # Pomocnicze: planowanie ścieżek A*
-    # ============================================================
 
     def _plan_path(self, agent, target_pos, wait_at_end=0.0):
         """Planuje nową ścieżkę A* dla agenta do podanego punktu.
@@ -75,9 +68,7 @@ class QueueManager:
         agent.finished_path = False
 
 
-    # ============================================================
     # Główna logika kolejek
-    # ============================================================
 
     def update(self, dt):
         """
@@ -85,7 +76,7 @@ class QueueManager:
         Wywoływana raz na krok symulacji z Simulation.update().
         """
 
-        # 1. Wykryj agentów, którzy skończyli zakupy
+        #agenci którzy skończyli zakupy
         for agent in self.env.agents:
             if not agent.active or getattr(agent, "exited", False):
                 continue
@@ -93,10 +84,10 @@ class QueueManager:
             phase = self.agent_phase.get(agent, "shopping")
 
             if phase == "shopping" and getattr(agent, "finished_path", False):
-                # zakończona ścieżka zakupowa -> przydziel do kasy / kolejki
+                # zakończona ścieżka zakupowa- przydziel do kasy / kolejki
                 self._assign_after_shopping(agent)
 
-        # 2. Obsłuż agentów, którzy właśnie dotarli do celu kolejki/kasy/wyjścia
+        #  Obsłuż agentów, którzy właśnie dotarli do celu kolejki/kasy/wyjścia
         for agent, phase in list(self.agent_phase.items()):
             if getattr(agent, "exited", False):
                 continue
@@ -104,7 +95,7 @@ class QueueManager:
             if phase in ("to_queue_slot", "to_cashier", "to_exit") and getattr(agent, "finished_path", False):
                 self._on_reached_destination(agent, phase)
 
-        # 3. Wolne kasy pobierają agentów z kolejki
+        #  Wolne kasy pobierają agentów z kolejki
         for idx, cashier in enumerate(self.cashiers):
             if cashier["agent"] is None and self.queue:
                 ag = self.queue.pop(0)
@@ -112,9 +103,7 @@ class QueueManager:
                 self._rebuild_queue_paths()
 
 
-    # ============================================================
-    # Etapy: po zakończeniu zakupów
-    # ============================================================
+    # po zakończeniu zakupów
 
     def _assign_after_shopping(self, agent):
         """
@@ -139,9 +128,7 @@ class QueueManager:
             self.agent_phase[agent] = "to_queue_slot"
             self._rebuild_queue_paths()
 
-    # ============================================================
     # Etapy: przejścia między stanami
-    # ============================================================
     def _cashier_index_of(self, agent):
         for i, cashier in enumerate(self.cashiers):
             if cashier["agent"] is agent:
@@ -163,7 +150,7 @@ class QueueManager:
                 # awaryjnie: jakby nie był w self.queue, trzymaj go tam, gdzie jest
                 slot_pos = agent.position.copy()
 
-            # NIE używamy już ścieżki – tylko stały goal na slot
+            # stały goal na slot
             agent.path = None
             agent.path_index = 0
             agent.finished_path = False
@@ -173,7 +160,7 @@ class QueueManager:
             agent.velocity *= 0.3
 
         elif phase == "to_cashier":
-            # Agent ZAKOŃCZYŁ ścieżkę do kasy + czekanie (bo wait_at_end już zadziałał)
+            # Agent zakocnczyl ścieżkę do kasy + czekanie (bo wait_at_end już zadziałał)
             idx = self._cashier_index_of(agent)
             if idx is not None:
                 self.cashiers[idx]["agent"] = None  # zwolnij kasę
@@ -185,11 +172,11 @@ class QueueManager:
 
         elif phase == "to_exit":
 
-            # Czy agent przeszedł już pierwszy punkt wyjścia?
+            # Czy agent przeszedł już pierwszy punkt wyjścia
             if hasattr(agent, "exit_sequence"):
                 agent.exit_index += 1
 
-                # JESZCZE JEST DRUGI PUNKT?
+                # drugi pkt wyjscia
                 if agent.exit_index < len(agent.exit_sequence):
                     # planujemy ścieżkę do kolejnego punktu
                     next_target = agent.exit_sequence[agent.exit_index]
@@ -213,7 +200,7 @@ class QueueManager:
         cashier["agent"] = agent
         cashier["service_time"] = service_time
 
-        # OSTATNI punkt ścieżki ma wait = service_time
+        # ostatni punkt ścieżki ma wait = service_time
         self._plan_path(agent, service_point, wait_at_end=service_time)
         self.agent_phase[agent] = "to_cashier"
 
@@ -231,7 +218,6 @@ class QueueManager:
         ag_conf = self.config["agent_generation"]
         exit_sequence = ag_conf["exit_sequence"]
 
-        # --- KLUCZOWE: odblokowanie agenta ---
         agent.is_waiting = False
         agent.wait_timer = 0.0
         agent.finished_path = False  # nowa ścieżka, więc resetujemy flagę

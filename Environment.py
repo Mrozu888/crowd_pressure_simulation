@@ -63,8 +63,7 @@ class Environment:
             if not detailed_path or len(detailed_path) < 2:
                 continue
 
-            # --- POPRAWKA: detailed_path to lista słowników ---
-            # Musimy wyciągnąć samo 'pos' dla konstruktora Agenta
+            # detailed_path to lista słowników 
             start_pos = detailed_path[0]['pos']
 
             new_agent = Agent(
@@ -73,9 +72,6 @@ class Environment:
                 path=detailed_path,
                 spawn_time=spawn_time
             )
-
-            # Opcjonalnie: zapisujemy waypoints (tylko pozycje) do wizualizacji
-            # new_agent.waypoints = [wp['pos'] for wp in strategic_path]
 
             agents.append(new_agent)
 
@@ -105,12 +101,9 @@ class Environment:
                 print(f"Nie można dojść do celu: {target_pos}. Pomijam go.")
                 continue
 
-            # Konwersja segmentu A* na format słownikowy
-            # Pomijamy pierwszy punkt (bo to start, który już mamy)
             for j in range(1, len(segment)):
                 pos = segment[j]
 
-                # Tylko OSTATNI punkt tego segmentu dziedziczy czas czekania
                 is_last_in_segment = (j == len(segment) - 1)
                 w = target_wait if is_last_in_segment else 0.0
 

@@ -13,10 +13,8 @@ class Agent:
         self.spawn_time = spawn_time
         self.active = (self.spawn_time <= 0.0)
 
-        # --- NOWE: Zmienne do czekania ---
         self.is_waiting = False
         self.wait_timer = 0.0
-        # ---------------------------------
         self.finished_path = False 
         self.exited = False     
         if path is not None:
@@ -83,7 +81,7 @@ class Agent:
         if not self.active:
             return
 
-        # --- LOGIKA CZEKANIA ---
+        # LOGIKA CZEKANIA 
         if self.is_waiting:
             self.wait_timer -= dt
 
@@ -96,7 +94,6 @@ class Agent:
                 self._next_waypoint()  # Czas minął, idziemy dalej
 
             return  # Nie aplikujemy sił SFM podczas czekania
-        # -----------------------
 
         acc = force
         self.velocity += acc * dt

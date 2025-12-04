@@ -30,36 +30,25 @@ def main():
     # Main simulation loop control flag
     running = True
     
-    # ======================
-    # MAIN SIMULATION LOOP
-    # ======================
+
     while running:
-        # ----------------------
-        # INPUT PROCESSING PHASE
-        # ----------------------
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False  # Exit when window close button is clicked
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     running = False  # Quit on ESC key
-        # --------------------
-        # SIMULATION UPDATE PHASE
-        # --------------------
+
         sim.update()  # Advance simulation by one time step
                       # - Updates agent positions and velocities
                       # - Applies social forces
                       # - Removes exited agents
 
-        # --------------------
-        # RENDERING PHASE
-        # --------------------
+
         vis.draw()    # Render current simulation state to screen
                       # - Draws walls, doors, and agents
                       # - Updates display
-        # --------------------
-        # FRAME RATE CONTROL
-        # --------------------
+
         clock.tick(30)  # Maintain 30 FPS (33.3ms per frame)
                         # This regulates simulation speed for consistent visualization
 

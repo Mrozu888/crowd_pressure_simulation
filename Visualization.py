@@ -2,18 +2,15 @@ import pygame
 
 
 class Visualization:
-    # --- 🎨 Stałe z kolorami dla łatwiejszej edycji ---
     BG_COLOR = (240, 240, 240)
     WALL_COLOR = (0, 0, 0)
     DOOR_COLOR = (0, 200, 0)
     AGENT_COLOR = (50, 50, 255)
 
-    # --- Nowe kolory otoczenia ---
     CASH_REGISTER_COLOR = (255, 100, 0)  # Np. pomarańczowy
     SHELF_COLOR = (120, 120, 120)  # Np. szary
     PALLET_COLOR = (139, 69, 19)  # Np. brązowy (kolor drewna)
 
-    # --- Nowe kolory ścieżek ---
     PATH_LINE_COLOR = (200, 200, 200)  # Jasnoszara linia (ścieżka A*)
     WAYPOINT_COLOR = (0, 0, 255)  # Niebieskie kropki (cele strategiczne)
     CURRENT_TARGET_COLOR = (0, 255, 0)  # Zielona kropka (gdzie agent idzie teraz)
@@ -23,11 +20,11 @@ class Visualization:
         self.env = env
         self.scale = env.scale
 
-        # Rozmiar sceny (symulacji)
+        # Rozmiar sceny 
         self.scene_width = int(env.width * self.scale)
         self.scene_height = int(env.height * self.scale)
 
-        # Rozmiar okna (może być większe niż scena)
+        # Rozmiar okna
         self.window_width = 1200
         self.window_height = 800
 
@@ -85,15 +82,12 @@ class Visualization:
             if not agent.active or agent.path is None or len(agent.path) < 2:
                 continue
 
-            # --- POPRAWKA 1: Wyciągamy ['pos'] ze słowników ---
-            # Wcześniej brało cały słownik 'p', co powodowało błąd
             pixel_path = [self._transform_coords(p['pos']) for p in agent.path]
 
             # Rysowanie linii ścieżki
             if len(pixel_path) > 1:
                 pygame.draw.lines(self.screen, self.PATH_LINE_COLOR, False, pixel_path, 1)
 
-            # --- Rysowanie celów strategicznych (Waypoints) ---
             if hasattr(agent, 'waypoints') and agent.waypoints:
                 for wp in agent.waypoints:
                     # Zabezpieczenie: sprawdzamy czy waypoint to słownik czy krotka
@@ -101,7 +95,6 @@ class Visualization:
                     wp_screen = self._transform_coords(coord)
                     pygame.draw.circle(self.screen, self.WAYPOINT_COLOR, wp_screen, 4)
 
-            # --- Rysowanie aktualnego celu ---
             current_idx = agent.path_index
             if 0 <= current_idx < len(pixel_path):
                 current_target_screen = pixel_path[current_idx]
@@ -119,11 +112,11 @@ class Visualization:
             pygame.draw.circle(self.screen, self.AGENT_COLOR, pos, radius)
 
     def draw(self):
-        # 1. Wyczyść ekran
+        # Wyczyść ekran
         self.screen.fill(self.BG_COLOR)
         self._draw_cash_payment()
 
-        # 2. Rysuj otoczenie
+        # Rysuj otoczenie
         if hasattr(self.env, 'walls'): self._draw_walls(self.env.walls)
         if hasattr(self.env, 'doors'): self._draw_doors(self.env.doors)
         if hasattr(self.env, 'shelves'): self._draw_shelves(self.env.shelves)
@@ -131,15 +124,15 @@ class Visualization:
         if hasattr(self.env, 'cash_registers'): self._draw_rect_objects(self.env.cash_registers,
                                                                         self.CASH_REGISTER_COLOR)
 
-        # 3. Rysuj ścieżki
+        # Rysuj ścieżki
         if hasattr(self.env, 'agents'):
             self._draw_paths(self.env.agents)
 
-        # 4. Rysuj agentów
+        # Rysuj agentów
         if hasattr(self.env, 'agents'):
             self._draw_agents(self.env.agents)
 
-        # 5. Flip
+        # Flip
         pygame.display.flip()
     def _draw_cash_payment(self):
         for pt in self.env.config["environment"]["cash_payment"]:

@@ -109,7 +109,7 @@ CONFIG = {
             #(12.75, 13.4),
             ###
             (13.85, 12.35),
-            #(13.85, 13.1),
+            (13.85, 13.1),
             #(13.85, 13.8),
             #(13.85, 14.6),
         ],
@@ -126,7 +126,6 @@ CONFIG = {
         "tau": 0.5,
     },
 
-    # --- TUTAJ ZMIANY: RĘCZNA DEFINICJA PUNKTÓW ---
     "agent_generation": {
         "n_agents": 20,
         "max_spawn_time": 30.0,
