@@ -182,7 +182,6 @@ CONFIG = {
             {"name": "Promocja", "pos": (18.5, 10), "prob": 0.3},
             {"name": "Promocja", "pos": (17.5, 10), "prob": 0.3},
 
-
         ]
     }
 }
