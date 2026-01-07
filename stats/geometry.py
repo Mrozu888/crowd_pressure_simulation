@@ -1,151 +1,135 @@
-"""
-Geometry helpers for statistics.
-
-This module duplicates the store/vestibule geometry used for visualization
-to classify agent positions into zones and queue regions, and to provide
-a regular grid for heatmap aggregation.
-"""
+from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Tuple, List, Dict
-import math
+from typing import List, Optional, Tuple
 
-# ----------------------
-# Geometry constants (copy of your store_layout.py)
-# ----------------------
+import numpy as np
 
-ORIG_W = 22.5
-STORE_X, STORE_Y = 0.0, -4.0
-STORE_W, STORE_H = 25.5, 27.85
-SCALE_X = STORE_W / ORIG_W
 
-# Vestibule
-VEST_X, VEST_Y = STORE_X, STORE_Y
-VEST_W, VEST_H = 5.5, 3.4
+@dataclass(frozen=True)
+class Rect:
+    x0: float
+    y0: float
+    x1: float
+    y1: float
 
-# Door intervals in world coordinates (y-ranges on walls)
-LEFT_DOOR_Y  = (-2.8, -1.3)                 # street ↔ vestibule (left outer wall)
-TOP_DOOR_IN  = (VEST_X + 1.8, VEST_X + 3.0) # vestibule ↔ store (top of vestibule, x-interval)
-RIGHT_DOOR_Y = (-2.6, -1.7)                 # store ↔ vestibule (right vestibule wall, y-interval)
+    def contains(self, p: np.ndarray) -> bool:
+        x = float(p[0])
+        y = float(p[1])
+        return (self.x0 <= x <= self.x1) and (self.y0 <= y <= self.y1)
 
-# Cashier rectangles approximation (for queue statistics)
-# You can refine these if needed; now they are coarse bounding boxes.
-CASHIER_ZONE_RECTS = [
-    # Big cashiers block (front of the store)
-    (5.0, -2.0, 8.0, 5.0),   # (x, y, w, h) – adjust to your needs
-]
-# Optional: separate queue rectangles per cashier if you want
-QUEUE_RECTS = [
-    # One general queue area in front of big cashiers
-    {"name": "front_cashiers_queue", "rect": (5.0, -3.5, 10.0, 3.5)},
-]
+    def area(self) -> float:
+        return max(0.0, self.x1 - self.x0) * max(0.0, self.y1 - self.y0)
 
 
 @dataclass
-class ZoneInfo:
-    name: str
-    rect: Tuple[float, float, float, float]  # (x, y, w, h)
-
-
 class StatsGeometry:
-    """
-    Pure geometric helper: no access to agents/simulation internals.
+    """World geometry helper for stats.
 
-    Provides:
-      - zone classification (street / vestibule / store)
-      - queue region membership
-      - heatmap grid information
+    Coordinates are in simulation units (same as Environment/Agent).
     """
 
-    def __init__(self,
-                 grid_nx: int = 32,
-                 grid_ny: int = 32) -> None:
-        # World bounds are store rectangle extended a bit to the left for "street"
-        self.store_rect = (STORE_X, STORE_Y, STORE_W, STORE_H)
-        self.vest_rect  = (VEST_X, VEST_Y, VEST_W, VEST_H)
+    store: Rect
+    street: Rect
+    vestibule: Rect
+    queue: Optional[Rect]
 
-        # Artificial "street" rectangle to the left of the store
-        street_w = 3.0
-        self.street_rect = (STORE_X - street_w, STORE_Y, street_w, VEST_H)
+    door_segments: List[Tuple[Tuple[float, float], Tuple[float, float]]]
 
-        self.zones: Dict[str, ZoneInfo] = {
-            "street":    ZoneInfo("street",    self.street_rect),
-            "vestibule": ZoneInfo("vestibule", self.vest_rect),
-            "store":     ZoneInfo("store",     self.store_rect),
-        }
+    # Heatmap extents (cover street + store)
+    heat_x0: float
+    heat_y0: float
+    heat_x1: float
+    heat_y1: float
+    heat_cell: float
 
-        # Heatmap grid setup over store+street
-        min_x = self.street_rect[0]
-        min_y = STORE_Y
-        max_x = STORE_X + STORE_W
-        max_y = STORE_Y + STORE_H
+    @staticmethod
+    def from_environment(env, street_width: float = 3.0, heat_cell: float = 0.25) -> "StatsGeometry":
+        width = float(getattr(env, "width", 0.0))
+        height = float(getattr(env, "height", 0.0))
 
-        self.grid_min_x = min_x
-        self.grid_min_y = min_y
-        self.grid_max_x = max_x
-        self.grid_max_y = max_y
+        store = Rect(0.0, 0.0, width, height)
+        street = Rect(-street_width, 0.0, 0.0, height)
 
-        self.grid_nx = grid_nx
-        self.grid_ny = grid_ny
-        self.cell_w = (max_x - min_x) / grid_nx
-        self.cell_h = (max_y - min_y) / grid_ny
+        doors = list(getattr(env, "doors", []) or [])
 
-        self.queue_rects = QUEUE_RECTS
-        self.cashier_zone_rects = CASHIER_ZONE_RECTS
+        # Vestibule near the entrance door (inside store), to preserve a stable 'entry area' metric.
+        if doors:
+            (x1, y1), (x2, y2) = doors[0]
+            mid_y = (float(y1) + float(y2)) / 2.0
+        else:
+            entrance_pts = getattr(env, "config", {}).get("agent_generation", {}).get("entrance_points", [])
+            if entrance_pts:
+                mid_y = float(entrance_pts[0][1])
+            else:
+                mid_y = height * 0.9
 
-    # ------------------
-    # Zone classification
-    # ------------------
-    def point_in_rect(self, x: float, y: float, rect: Tuple[float, float, float, float]) -> bool:
-        rx, ry, rw, rh = rect
-        return (rx <= x <= rx + rw) and (ry <= y <= ry + rh)
+        vestibule = Rect(
+            0.0,
+            max(0.0, mid_y - 1.0),
+            min(width, 2.0),
+            min(height, mid_y + 1.0),
+        )
 
-    def classify_zone(self, x: float, y: float) -> str:
-        """Return 'street', 'vestibule', 'store' or 'other'."""
-        if self.point_in_rect(x, y, self.street_rect):
+        # Queue zone: bounding box around QueueManager.queue_slots (if present)
+        queue_rect = None
+        qm = getattr(env, "queue_manager", None)
+        slots = getattr(qm, "queue_slots", None)
+        if slots is not None and len(slots) > 0:
+            pts = np.asarray(slots, dtype=np.float32)
+            x0 = float(np.min(pts[:, 0])) - 0.6
+            x1 = float(np.max(pts[:, 0])) + 0.6
+            y0 = float(np.min(pts[:, 1])) - 0.6
+            y1 = float(np.max(pts[:, 1])) + 0.6
+            queue_rect = Rect(max(store.x0, x0), max(store.y0, y0), min(store.x1, x1), min(store.y1, y1))
+
+        heat_x0 = -street_width
+        heat_y0 = 0.0
+        heat_x1 = width
+        heat_y1 = height
+
+        return StatsGeometry(
+            store=store,
+            street=street,
+            vestibule=vestibule,
+            queue=queue_rect,
+            door_segments=doors,
+            heat_x0=heat_x0,
+            heat_y0=heat_y0,
+            heat_x1=heat_x1,
+            heat_y1=heat_y1,
+            heat_cell=float(heat_cell),
+        )
+
+    def classify(self, pos: np.ndarray) -> str:
+        if self.street.contains(pos):
             return "street"
-        if self.point_in_rect(x, y, self.vest_rect):
-            return "vestibule"
-        if self.point_in_rect(x, y, self.store_rect):
+        if self.store.contains(pos):
+            if self.queue is not None and self.queue.contains(pos):
+                return "queue"
+            if self.vestibule.contains(pos):
+                return "vestibule"
             return "store"
-        return "other"
+        return "outside"
 
-    # ------------------
-    # Queue / cashier helpers
-    # ------------------
-    def in_any_queue(self, x: float, y: float) -> str | None:
-        """Return queue name if point is inside a queue rectangle, otherwise None."""
-        for q in self.queue_rects:
-            if self.point_in_rect(x, y, q["rect"]):
-                return q["name"]
+    def heatmap_shape(self) -> Tuple[int, int]:
+        w = int(np.ceil((self.heat_x1 - self.heat_x0) / self.heat_cell))
+        h = int(np.ceil((self.heat_y1 - self.heat_y0) / self.heat_cell))
+        return (h, w)
+
+    def heatmap_index(self, pos: np.ndarray) -> Optional[Tuple[int, int]]:
+        x = float(pos[0])
+        y = float(pos[1])
+        if x < self.heat_x0 or x > self.heat_x1 or y < self.heat_y0 or y > self.heat_y1:
+            return None
+        col = int((x - self.heat_x0) / self.heat_cell)
+        row = int((y - self.heat_y0) / self.heat_cell)
+        h, w = self.heatmap_shape()
+        if 0 <= row < h and 0 <= col < w:
+            return (row, col)
         return None
 
-    def in_cashier_zone(self, x: float, y: float) -> bool:
-        for rect in self.cashier_zone_rects:
-            if self.point_in_rect(x, y, rect):
-                return True
-        return False
-
-    # ------------------
-    # Heatmap helpers
-    # ------------------
-    def cell_index(self, x: float, y: float) -> tuple[int, int] | None:
-        """Return (ix, iy) indices of the heatmap cell or None if outside grid."""
-        if not (self.grid_min_x <= x <= self.grid_max_x and
-                self.grid_min_y <= y <= self.grid_max_y):
-            return None
-        ix = int((x - self.grid_min_x) / self.cell_w)
-        iy = int((y - self.grid_min_y) / self.cell_h)
-        # Clamp indices at the border
-        ix = max(0, min(self.grid_nx - 1, ix))
-        iy = max(0, min(self.grid_ny - 1, iy))
-        return ix, iy
-
-    @property
-    def zone_areas(self) -> Dict[str, float]:
-        """Return precomputed areas of zones in m^2."""
-        res = {}
-        for name, info in self.zones.items():
-            x, y, w, h = info.rect
-            res[name] = w * h
-        return res
+    def heat_cell_center(self, row: int, col: int) -> Tuple[float, float]:
+        x = self.heat_x0 + (col + 0.5) * self.heat_cell
+        y = self.heat_y0 + (row + 0.5) * self.heat_cell
+        return x, y

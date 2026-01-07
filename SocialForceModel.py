@@ -49,7 +49,7 @@ class SocialForceModel:
         self.desired_speed = params.get("desired_speed", 1.2)  # m/s
         self.relax_time = params.get("tau", 0.5)  # Agent reaction time
 
-    def compute_force(self, agent, agents, walls):
+    def compute_force(self, agent, agents, walls, cashiers=None):
         """
         Compute the total force acting on an agent from all sources.
         
@@ -71,12 +71,18 @@ class SocialForceModel:
             All forces are summed linearly. The damping force prevents
             velocity oscillations and provides more realistic movement.
         """
+        # jeśli agent stoi przy kasie -> zero sił
+        if getattr(agent, "is_waiting", False):
+            return np.zeros(2, dtype=float)
+
+        if cashiers is None:
+            cashiers = []
         f_goal = self._force_to_goal(agent)
         f_people = self._force_from_people(agent, agents)
         f_walls = self._force_from_walls(agent, walls)
         f_damping = -0.2 * agent.velocity  # Simple motion resistance (friction)
-
         total_force = f_goal + f_people + f_walls + f_damping
+
         return total_force
 
     # -------------------
@@ -216,3 +222,5 @@ class SocialForceModel:
                 force += 200 * overlap * n_iw  # Contact force
                 
         return force
+    
+

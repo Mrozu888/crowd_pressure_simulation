@@ -1,415 +1,307 @@
-"""
-Statistics manager (logic).
-
-Collects:
-  - per-agent life statistics (times, distances, idle/queue durations),
-  - per-frame aggregates (flows, densities, contacts, speeds, queue lengths),
-  - heatmap occupancy (time in grid cells).
-
-Integrates with:
-  - Agent objects: expected attributes: position (np.ndarray or (x,y)),
-    velocity (np.ndarray or (vx,vy)), optional .kind and .covid_compliant and .id.
-"""
-
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import Dict, List, Optional, Iterable, Tuple
-from collections import deque
-import math
+
+from dataclasses import dataclass, field
+from typing import Deque, Dict, List, Optional
+
 import numpy as np
+from collections import deque
 
 from .geometry import StatsGeometry
-from .writer import StatsCSVWriter, AgentSummaryRow, FrameStatsRow
+from .writer import StatsWriter
 
 
 @dataclass
-class AgentRuntimeState:
-    """Per-agent evolving state stored inside StatsManager."""
-    kind: str
-    spawned_at: float
-    first_in_vestibule: Optional[float] = None
-    first_in_store: Optional[float] = None
-    last_in_vestibule: Optional[float] = None
-    last_in_store: Optional[float] = None
-    total_idle_time: float = 0.0
-    total_queue_time: float = 0.0
-    total_distance: float = 0.0
-    last_pos: Optional[Tuple[float, float]] = None
-    covid_compliant: Optional[bool] = None
-    last_zone: str = "other"
+class _AgentState:
+    agent_id: int
+    activated_at: float
+    spawn_time: float
+
+    last_pos: Optional[np.ndarray] = None
+    dist: float = 0.0
+
+    idle_time: float = 0.0
+    queue_time: float = 0.0
+
+    zone: str = "outside"
+    pending_zone: Optional[str] = None
+    pending_since: float = 0.0
+
+    zone_durations: Dict[str, float] = field(default_factory=dict)
+
+    exited: bool = False
+    exit_time: Optional[float] = None
+
+    speed_sum: float = 0.0
+    speed_samples: int = 0
 
 
 class StatsManager:
-    """
-    Central manager for statistics.
+    """Collects per-frame and per-agent statistics."""
 
-    Usage:
-      geom = StatsGeometry()
-      writer = StatsCSVWriter()
-      stats = StatsManager(geom, writer, covid_dist=1.7)
-
-      # each frame
-      stats.update(dt, env.agents)
-
-      # HUD can read stats.last_frame_stats
-      # Visualization can use stats.crowding_map(env.agents) for coloring.
-
-      # on shutdown
-      stats.close()
-    """
-
-    def __init__(self,
-                 geom: StatsGeometry,
-                 writer: Optional[StatsCSVWriter] = None,
-                 covid_dist: float = 1.7,
-                 idle_speed_thr: float = 0.05) -> None:
-
+    def __init__(
+        self,
+        geom: StatsGeometry,
+        writer: StatsWriter,
+        zone_debounce_s: float = 0.30,
+        idle_speed_thresh: float = 0.05,
+        history_seconds: float = 120.0,
+    ):
         self.geom = geom
-        self.writer = writer or StatsCSVWriter(".")
-        self.covid_dist = covid_dist
-        self.idle_speed_thr = idle_speed_thr
+        self.writer = writer
 
-        self.t: float = 0.0
+        self.zone_debounce_s = float(zone_debounce_s)
+        self.idle_speed_thresh = float(idle_speed_thresh)
 
-        # id -> AgentRuntimeState
-        self._agents: Dict[int, AgentRuntimeState] = {}
+        self._agents: Dict[int, _AgentState] = {}
+        self._heatmap = np.zeros(self.geom.heatmap_shape(), dtype=np.float32)
 
-        # heatmap (time accumulation in seconds)
-        self.heat = np.zeros((geom.grid_ny, geom.grid_nx), dtype=float)
+        self._entries_total = 0
+        self._exits_total = 0
 
-        # flows: sliding window of times for each door
-        self._door_windows = {
-            "left": deque(),   # street <-> vestibule
-            "top": deque(),    # vestibule <-> store
-            "right": deque(),  # store <-> vestibule (not used separately yet)
+        self.last_frame: Dict = {}
+
+        self._hist_t: Deque[float] = deque()
+        self._hist_entry_rate: Deque[float] = deque()
+        self._hist_exit_rate: Deque[float] = deque()
+        self._hist_queue_len: Deque[float] = deque()
+        self._hist_inside: Deque[float] = deque()
+        self._hist_density: Deque[float] = deque()
+        self._history_seconds = float(history_seconds)
+
+        self._live_hotspots: List[Dict] = []
+        self._last_hotspot_update_t: float = -1e9
+
+    @property
+    def heatmap(self) -> np.ndarray:
+        return self._heatmap
+
+    def live_hotspots(self) -> List[Dict]:
+        return self._live_hotspots
+
+    def _get_state(self, agent, sim_time: float) -> _AgentState:
+        aid = id(agent)
+        st = self._agents.get(aid)
+        if st is None:
+            st = _AgentState(
+                agent_id=aid,
+                activated_at=float(sim_time),
+                spawn_time=float(getattr(agent, "spawn_time", 0.0)),
+            )
+            self._agents[aid] = st
+        return st
+
+    def _push_hist(self, t: float, entry_rate: float, exit_rate: float, queue_len: float, inside: float, density: float):
+        self._hist_t.append(t)
+        self._hist_entry_rate.append(entry_rate)
+        self._hist_exit_rate.append(exit_rate)
+        self._hist_queue_len.append(queue_len)
+        self._hist_inside.append(inside)
+        self._hist_density.append(density)
+
+        tmin = t - self._history_seconds
+        while self._hist_t and self._hist_t[0] < tmin:
+            self._hist_t.popleft()
+            self._hist_entry_rate.popleft()
+            self._hist_exit_rate.popleft()
+            self._hist_queue_len.popleft()
+            self._hist_inside.popleft()
+            self._hist_density.popleft()
+
+    def history(self) -> Dict[str, List[float]]:
+        return {
+            "time": list(self._hist_t),
+            "entry_rate": list(self._hist_entry_rate),
+            "exit_rate": list(self._hist_exit_rate),
+            "queue_len": list(self._hist_queue_len),
+            "inside": list(self._hist_inside),
+            "density": list(self._hist_density),
         }
-        self.window_len = 60.0  # seconds
 
-        # Per-frame info exposed to HUD
-        self.last_frame_stats: Optional[FrameStatsRow] = None
+    def update(self, dt: float, sim_time: float, agents, env=None):
+        dt = float(dt)
+        sim_time = float(sim_time)
 
-        # For previous frame: mapping id -> zone
-        self._prev_zones: Dict[int, str] = {}
+        entries_step = 0
+        exits_step = 0
 
-    # -------------
-    # Utility
-    # -------------
-    def _get_pos(self, agent) -> Tuple[float, float]:
-        p = getattr(agent, "position", getattr(agent, "pos", None))
-        if p is None:
-            raise AttributeError("Agent has no 'position' or 'pos' attribute")
-        return float(p[0]), float(p[1])
+        n_active = 0
+        zone_counts = {"street": 0, "vestibule": 0, "store": 0, "queue": 0, "outside": 0}
+        speed_sum = 0.0
+        speed_n = 0
 
-    def _get_vel(self, agent) -> Tuple[float, float]:
-        v = getattr(agent, "velocity", getattr(agent, "vel", None))
-        if v is None:
-            return 0.0, 0.0
-        return float(v[0]), float(v[1])
-
-    def _get_kind(self, agent) -> str:
-        if hasattr(agent, "kind"):
-            return str(agent.kind)
-        if hasattr(agent, "direction"):
-            return str(agent.direction)
-        return "unknown"
-
-    def _get_covid_flag(self, agent) -> Optional[bool]:
-        if hasattr(agent, "covid_compliant"):
-            return bool(agent.covid_compliant)
-        if hasattr(agent, "covid_aware"):
-            return bool(agent.covid_aware)
-        return None
-
-    # -------------
-    # Public API
-    # -------------
-    def update(self, dt: float, agents: Iterable) -> None:
-        """
-        Update statistics for one simulation step.
-
-        This method:
-          - advances global time,
-          - detects new/removed agents,
-          - updates per-agent times and distances,
-          - tracks zone transitions, flows, queue occupancy,
-          - writes one frame row to CSV.
-        """
-        self.t += dt
-
-        agents_list = list(agents)
-        current_ids = set()
-
-        # Update or create runtime state per agent
-        for a in agents_list:
-            if not hasattr(a, "id"):
-                # Without a stable id we cannot track per-agent stats
+        for agent in agents:
+            if not getattr(agent, "active", True):
                 continue
 
-            aid = int(a.id)
-            current_ids.add(aid)
-            x, y = self._get_pos(a)
-            vx, vy = self._get_vel(a)
-            speed = math.hypot(vx, vy)
-            zone = self.geom.classify_zone(x, y)
+            n_active += 1
+            st = self._get_state(agent, sim_time)
 
-            if aid not in self._agents:
-                # New agent
-                st = AgentRuntimeState(
-                    kind=self._get_kind(a),
-                    spawned_at=self.t,
-                    covid_compliant=self._get_covid_flag(a),
-                    last_zone=zone,
-                    last_pos=(x, y),
-                )
-                self._agents[aid] = st
-            else:
-                st = self._agents[aid]
+            pos = np.asarray(getattr(agent, "position"), dtype=np.float32)
+            vel = np.asarray(getattr(agent, "velocity"), dtype=np.float32)
+            spd = float(np.linalg.norm(vel))
+            st.speed_sum += spd
+            st.speed_samples += 1
 
-            # Distance travelled
+            speed_sum += spd
+            speed_n += 1
+
             if st.last_pos is not None:
-                dx = x - st.last_pos[0]
-                dy = y - st.last_pos[1]
-                st.total_distance += math.hypot(dx, dy)
-            st.last_pos = (x, y)
+                st.dist += float(np.linalg.norm(pos - st.last_pos))
+            st.last_pos = pos
 
-            # Idle time
-            if speed < self.idle_speed_thr:
-                st.total_idle_time += dt
+            if spd < self.idle_speed_thresh:
+                st.idle_time += dt
 
-            # Queue time
-            if self.geom.in_any_queue(x, y) is not None:
-                st.total_queue_time += dt
+            z = self.geom.classify(pos)
+            zone_counts[z] = zone_counts.get(z, 0) + 1
 
-            # Zone timings
-            if zone == "vestibule":
-                st.last_in_vestibule = self.t
-                if st.first_in_vestibule is None:
-                    st.first_in_vestibule = self.t
-            elif zone == "store":
-                st.last_in_store = self.t
-                if st.first_in_store is None:
-                    st.first_in_store = self.t
+            if z != st.zone:
+                if st.pending_zone != z:
+                    st.pending_zone = z
+                    st.pending_since = sim_time
+                else:
+                    if (sim_time - st.pending_since) >= self.zone_debounce_s:
+                        prev = st.zone
+                        st.zone = z
+                        st.pending_zone = None
+                        if prev == "street" and z in ("vestibule", "store", "queue"):
+                            entries_step += 1
+                            self._entries_total += 1
+            else:
+                st.pending_zone = None
 
-            # Heatmap integration
-            cell = self.geom.cell_index(x, y)
-            if cell is not None:
-                ix, iy = cell
-                self.heat[iy, ix] += dt
+            st.zone_durations[st.zone] = st.zone_durations.get(st.zone, 0.0) + dt
+            if st.zone == "queue":
+                st.queue_time += dt
 
-            # Door crossings via zone change
-            prev_zone = self._prev_zones.get(aid, zone)
-            if prev_zone != zone:
-                self._handle_zone_transition(prev_zone, zone)
-            self._prev_zones[aid] = zone
+            idx = self.geom.heatmap_index(pos)
+            if idx is not None:
+                self._heatmap[idx] += dt
 
-        # Detect removed agents
-        gone_ids = [aid for aid in self._agents.keys() if aid not in current_ids]
-        for aid in gone_ids:
-            self._finalize_agent(aid)
-            self._agents.pop(aid, None)
-            self._prev_zones.pop(aid, None)
+            if getattr(agent, "exited", False) and not st.exited:
+                st.exited = True
+                st.exit_time = sim_time
+                exits_step += 1
+                self._exits_total += 1
+                self._write_agent_row(st)
 
-        # Per-frame aggregates
-        self._update_flows_window()
-        self._write_frame_row(agents_list)
+        queue_len = 0
+        service_n = 0
+        if env is not None and hasattr(env, "queue_manager"):
+            qm = env.queue_manager
+            queue_len = int(len(getattr(qm, "queue", []) or []))
+            cashiers = getattr(qm, "cashiers", []) or []
+            service_n = sum(1 for c in cashiers if c.get("agent") is not None)
 
-    def close(self) -> None:
-        """Flush and close CSV files."""
-        self.writer.flush()
+        store_area = self.geom.store.area() if self.geom.store is not None else 0.0
+        inside_now = zone_counts.get("store", 0) + zone_counts.get("vestibule", 0) + zone_counts.get("queue", 0)
+        density_store = (inside_now / store_area) if store_area > 0 else 0.0
+
+        avg_speed = (speed_sum / speed_n) if speed_n > 0 else 0.0
+
+        entry_rate = (entries_step / dt) if dt > 0 else 0.0
+        exit_rate = (exits_step / dt) if dt > 0 else 0.0
+
+        inside_est = float(self._entries_total - self._exits_total)
+
+        frame = {
+            "time": sim_time,
+            "dt": dt,
+            "n_active": n_active,
+            "n_street": zone_counts.get("street", 0),
+            "n_vestibule": zone_counts.get("vestibule", 0),
+            "n_store": zone_counts.get("store", 0),
+            "n_queue_zone": zone_counts.get("queue", 0),
+            "inside_now": inside_now,
+            "inside_est": inside_est,
+            "queue_len": queue_len,
+            "service_n": service_n,
+            "entries_step": entries_step,
+            "exits_step": exits_step,
+            "entries_total": self._entries_total,
+            "exits_total": self._exits_total,
+            "entry_rate_s": entry_rate,
+            "exit_rate_s": exit_rate,
+            "avg_speed": avg_speed,
+            "density_store": density_store,
+        }
+
+        self.last_frame = frame
+        self.writer.write_frame(frame)
+
+        self._push_hist(sim_time, entry_rate, exit_rate, float(queue_len), inside_est, density_store)
+
+        if sim_time - self._last_hotspot_update_t >= 1.0:
+            self._live_hotspots = self._compute_hotspots(top_k=40)
+            self._last_hotspot_update_t = sim_time
+
+    def _write_agent_row(self, st: _AgentState):
+        exit_time = float(st.exit_time) if st.exit_time is not None else None
+        travel_time = (exit_time - st.activated_at) if exit_time is not None else None
+        mean_speed = (st.speed_sum / st.speed_samples) if st.speed_samples > 0 else 0.0
+
+        row = {
+            "agent_id": st.agent_id,
+            "spawn_time": st.spawn_time,
+            "activated_at": st.activated_at,
+            "exit_time": exit_time,
+            "travel_time": travel_time,
+            "distance": st.dist,
+            "mean_speed": mean_speed,
+            "idle_time": st.idle_time,
+            "queue_time": st.queue_time,
+            "time_street": st.zone_durations.get("street", 0.0),
+            "time_vestibule": st.zone_durations.get("vestibule", 0.0),
+            "time_store": st.zone_durations.get("store", 0.0),
+            "time_queue": st.zone_durations.get("queue", 0.0),
+        }
+        self.writer.write_agent(row)
+
+    def close(self):
+        for st in list(self._agents.values()):
+            if st.exited and st.exit_time is not None:
+                continue
+            row = {
+                "agent_id": st.agent_id,
+                "spawn_time": st.spawn_time,
+                "activated_at": st.activated_at,
+                "exit_time": st.exit_time,
+                "travel_time": (st.exit_time - st.activated_at) if st.exit_time is not None else None,
+                "distance": st.dist,
+                "mean_speed": (st.speed_sum / st.speed_samples) if st.speed_samples > 0 else 0.0,
+                "idle_time": st.idle_time,
+                "queue_time": st.queue_time,
+                "time_street": st.zone_durations.get("street", 0.0),
+                "time_vestibule": st.zone_durations.get("vestibule", 0.0),
+                "time_store": st.zone_durations.get("store", 0.0),
+                "time_queue": st.zone_durations.get("queue", 0.0),
+            }
+            self.writer.write_agent(row)
+
+        self.writer.save_heatmap(self._heatmap, self.geom.heat_x0, self.geom.heat_y0, self.geom.heat_cell)
+        self.writer.save_hotspots(self._compute_hotspots(top_k=25))
         self.writer.close()
 
-    # -------------
-    # Crowd coloring helper
-    # -------------
-    def crowding_map(self,
-                     agents: Iterable,
-                     low_threshold: int = 3,
-                     high_threshold: int = 6) -> Dict[int, int]:
-        """
-        Compute crowding level per agent based on how many agents are in the
-        same heatmap cell.
+    def _compute_hotspots(self, top_k: int = 25) -> List[Dict]:
+        hm = self._heatmap
+        if hm.size == 0:
+            return []
+        flat = hm.ravel()
+        if np.all(flat <= 0):
+            return []
 
-        Returns dict: agent_id -> level, where:
-          0 = low density (normal color)
-          1 = medium density (yellow)
-          2 = high density (red)
+        top_k = int(min(top_k, flat.size))
+        idxs = np.argpartition(flat, -top_k)[-top_k:]
+        idxs = idxs[np.argsort(flat[idxs])[::-1]]
 
-        Thresholds:
-          - if count < low_threshold   -> 0
-          - if low_threshold <= count < high_threshold -> 1
-          - if count >= high_threshold -> 2
-        """
-        # Count agents per grid cell
-        cell_counts: Dict[Tuple[int, int], int] = {}
-        cell_by_id: Dict[int, Tuple[int, int]] = {}
-
-        for a in agents:
-            if not hasattr(a, "id"):
-                continue
-            aid = int(a.id)
-            x, y = self._get_pos(a)
-            cell = self.geom.cell_index(x, y)
-            if cell is None:
-                continue
-            cell_by_id[aid] = cell
-            cell_counts[cell] = cell_counts.get(cell, 0) + 1
-
-        levels: Dict[int, int] = {}
-        for aid, cell in cell_by_id.items():
-            c = cell_counts.get(cell, 0)
-            if c < low_threshold:
-                levels[aid] = 0
-            elif c < high_threshold:
-                levels[aid] = 1
-            else:
-                levels[aid] = 2
-        return levels
-
-    # -------------
-    # Internal helpers
-    # -------------
-    def _handle_zone_transition(self, prev_zone: str, zone: str) -> None:
-        """
-        Register transitions for flow counters.
-
-        We interpret:
-          street <-> vestibule  -> left door
-          vestibule <-> store   -> top door (aggregated).
-        """
-        t = self.t
-
-        def push(door_name: str):
-            self._door_windows[door_name].append(t)
-
-        # Left door: street <-> vestibule
-        if ((prev_zone == "street" and zone == "vestibule") or
-            (prev_zone == "vestibule" and zone == "street")):
-            push("left")
-
-        # Vestibule <-> store: counted as "top" door for now
-        if ((prev_zone == "vestibule" and zone == "store") or
-            (prev_zone == "store" and zone == "vestibule")):
-            push("top")
-
-    def _update_flows_window(self) -> Dict[str, float]:
-        """
-        Remove old events from door windows and compute flows in people/min.
-        """
-        flows = {}
-        t0 = self.t - self.window_len
-        for name, dq in self._door_windows.items():
-            while dq and dq[0] < t0:
-                dq.popleft()
-            flows[name] = len(dq) / (self.window_len / 60.0)
-        return flows
-
-    def _finalize_agent(self, aid: int) -> None:
-        """Compute agent summary and write one CSV row."""
-        st = self._agents[aid]
-
-        time_to_enter_store = None
-        time_in_store = None
-        time_in_vest = None
-
-        if st.first_in_store is not None and st.spawned_at is not None:
-            time_to_enter_store = st.first_in_store - st.spawned_at
-        if st.first_in_store is not None and st.last_in_store is not None:
-            time_in_store = st.last_in_store - st.first_in_store
-        if st.first_in_vestibule is not None and st.last_in_vestibule is not None:
-            time_in_vest = st.last_in_vestibule - st.first_in_vestibule
-
-        row = AgentSummaryRow(
-            agent_id=aid,
-            kind=st.kind,
-            spawned_at=st.spawned_at,
-            first_in_vestibule=st.first_in_vestibule,
-            first_in_store=st.first_in_store,
-            last_in_vestibule=st.last_in_vestibule,
-            last_in_store=st.last_in_store,
-            time_to_enter_store=time_to_enter_store,
-            time_in_store=time_in_store,
-            time_in_vestibule=time_in_vest,
-            total_idle_time=st.total_idle_time,
-            total_queue_time=st.total_queue_time,
-            total_distance=st.total_distance,
-            covid_compliant=st.covid_compliant,
-        )
-        self.writer.write_agent_row(row)
-
-    def _write_frame_row(self, agents: List) -> None:
-        """Compute per-frame aggregates and write stats_frames.csv row."""
-        geom = self.geom
-        zones = {"street": 0, "vestibule": 0, "store": 0}
-        speeds = []
-        speeds_store = []
-        speeds_vest = []
-
-        queue_counts = {"front_cashiers_queue": 0}
-        contacts_lt_1 = 0
-        contacts_lt_covid = 0
-
-        positions = []
-        for a in agents:
-            if not hasattr(a, "id"):
-                continue
-            x, y = self._get_pos(a)
-            vx, vy = self._get_vel(a)
-            v = math.hypot(vx, vy)
-            zone = geom.classify_zone(x, y)
-            if zone in zones:
-                zones[zone] += 1
-            speeds.append(v)
-            if zone == "store":
-                speeds_store.append(v)
-            elif zone == "vestibule":
-                speeds_vest.append(v)
-
-            qname = geom.in_any_queue(x, y)
-            if qname is not None:
-                queue_counts[qname] += 1
-
-            positions.append((x, y))
-
-        # Contacts
-        n = len(positions)
-        for i in range(n):
-            xi, yi = positions[i]
-            for j in range(i + 1, n):
-                xj, yj = positions[j]
-                d = math.hypot(xi - xj, yi - yj)
-                if d < 1.0:
-                    contacts_lt_1 += 1
-                if d < self.covid_dist:
-                    contacts_lt_covid += 1
-
-        flows = self._update_flows_window()
-        areas = geom.zone_areas
-
-        density_store = zones["store"] / areas["store"] if areas["store"] > 0 else 0.0
-        density_vest = zones["vestibule"] / areas["vestibule"] if areas["vestibule"] > 0 else 0.0
-
-        avg_speed = float(sum(speeds) / len(speeds)) if speeds else 0.0
-        avg_speed_store = float(sum(speeds_store) / len(speeds_store)) if speeds_store else 0.0
-        avg_speed_vest = float(sum(speeds_vest) / len(speeds_vest)) if speeds_vest else 0.0
-
-        row = FrameStatsRow(
-            t=self.t,
-            n_agents=len(positions),
-            n_in_store=zones["store"],
-            n_in_vestibule=zones["vestibule"],
-            n_in_street=zones["street"],
-            flow_left_door_per_min=flows["left"],
-            flow_top_door_per_min=flows["top"],
-            flow_right_door_per_min=flows["right"],
-            contacts_lt_1m=contacts_lt_1,
-            contacts_lt_covid=contacts_lt_covid,
-            avg_speed=avg_speed,
-            avg_speed_store=avg_speed_store,
-            avg_speed_vestibule=avg_speed_vest,
-            queue_front_cashiers=queue_counts["front_cashiers_queue"],
-            density_store=density_store,
-            density_vestibule=density_vest,
-        )
-
-        self.writer.write_frame_row(row)
-        self.last_frame_stats = row
+        rows, cols = hm.shape
+        out: List[Dict] = []
+        for rank, flat_idx in enumerate(idxs, start=1):
+            r = int(flat_idx // cols)
+            c = int(flat_idx % cols)
+            val = float(hm[r, c])
+            x, y = self.geom.heat_cell_center(r, c)
+            out.append(
+                {"rank": rank, "person_seconds": val, "cell_row": r, "cell_col": c, "x": x, "y": y}
+            )
+        return out

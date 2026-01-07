@@ -1,0 +1,5 @@
+time_s,entries_per_min,exits_per_min,queue_len,inside,density_store
+0,0,0,0,0,0
+60,12,10,3,20,0.07
+120,15,14,5,28,0.10
+180,10,12,2,22,0.08

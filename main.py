@@ -1,110 +1,118 @@
+import os
 import pygame
+
 from Config import CONFIG
 from Environment import Environment
 from Simulation import Simulation
 from Visualization import Visualization
 
-# NEW: statistics imports
-from stats.geometry import StatsGeometry
-from stats.manager import StatsManager
-from stats.writer import StatsCSVWriter
-from stats.hud import StatsHUD
+from stats import StatsGeometry, StatsManager, StatsWriter, RealDataSeries, StatsHUD
+
+
+def _load_real_data_from_config():
+    rd_conf = CONFIG.get("real_data", {}) if isinstance(CONFIG, dict) else {}
+    if not rd_conf or not rd_conf.get("enabled", False):
+        return None
+
+    csv_path = rd_conf.get("csv_path", "")
+    if not csv_path:
+        return None
+    if not os.path.isfile(csv_path):
+        return None
+
+    time_col = rd_conf.get("time_col", "time_s")
+    column_map = rd_conf.get(
+        "column_map",
+        {
+            "queue_len": "queue_len",
+            "entries_per_min": "entries_per_min",
+            "exits_per_min": "exits_per_min",
+            "inside": "inside",
+            "density_store": "density_store",
+        },
+    )
+
+    try:
+        return RealDataSeries.load_csv(csv_path, time_col=time_col, column_map=column_map)
+    except Exception:
+        return None
 
 
 def main():
-    """
-    Main entry point for the Social Force Model simulation application.
-    
-    This function initializes and runs the complete simulation loop, integrating:
-    - Environment setup and agent initialization
-    - Physics simulation using the Social Force Model
-    - Real-time visualization using PyGame
-    - User interaction and frame rate control
-    
-    The main loop follows the classic game architecture pattern:
-    Initialize → Process Input → Update → Render → Repeat
-    """
-    
-    # Initialize PyGame and create clock for frame rate control
     pygame.init()
+    pygame.font.init()
+
+    font = pygame.font.SysFont(None, 24)
+    small_font = pygame.font.SysFont(None, 20)
+
     clock = pygame.time.Clock()
 
-    # Initialize core simulation components
-    env = Environment(CONFIG)      # Physical environment with agents and obstacles
-    sim = Simulation(env, CONFIG)  # Simulation controller for time evolution
+    env = Environment(CONFIG)
+    sim = Simulation(env, CONFIG)
+    vis = Visualization(env)
 
-    # NEW: statistics setup
-    geom = StatsGeometry()
-    writer = StatsCSVWriter(".")
-    stats = StatsManager(geom, writer, covid_dist=CONFIG.get("covid_dist", 1.7))
-    hud_font = pygame.font.SysFont("consolas", 14)
-    hud = StatsHUD(stats, font=hud_font, pos=(10, 10))
+    # Stats (CSV + heatmap + live HUD)
+    writer = StatsWriter()
+    geom = StatsGeometry.from_environment(env)
+    stats = StatsManager(geom, writer)
 
-    # NOTE: pass 'stats' into Visualization so it can color agents by crowding
-    vis = Visualization(env, stats)       # Visual rendering system
+    real_data = _load_real_data_from_config()
+    hud = StatsHUD(font=font, small_font=small_font, real_data=real_data)
 
-    
-    # Main simulation loop control flag
     running = True
-    
-    # ======================
-    # MAIN SIMULATION LOOP
-    # ======================
-    while running:
-        # ----------------------
-        # INPUT PROCESSING PHASE
-        # ----------------------
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False  # Exit when window close button is clicked
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    running = False  # Quit on ESC key
+    paused = False
+    target_fps = 60
 
-        # --------------------
-        # SIMULATION UPDATE PHASE
-        # --------------------
-        sim.update()  # Advance simulation by one time step
-                      # - Updates agent positions and velocities
-                      # - Applies social forces
-                      # - Removes exited agents
+    try:
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        running = False
+                    elif event.key == pygame.K_SPACE:
+                        paused = not paused
 
-        # NEW: statistics update.
-        dt = CONFIG.get("simulation", {}).get("dt", 0.033)
-        stats.update(dt, env.agents)
+                    # HUD toggles
+                    elif event.key in (pygame.K_F1, pygame.K_g, pygame.K_h, pygame.K_r):
+                        hud.handle_key(event.key)
 
-        # --------------------
-        # RENDERING PHASE
-        # --------------------
-        vis.draw()    # Render current simulation state to screen
-                      # - Draws walls, doors, and agents
-                      # - Updates display
+                    # Speed control
+                    elif event.key == pygame.K_EQUALS or event.key == pygame.K_KP_PLUS:
+                        target_fps = min(300, target_fps + 10)
+                        print(f"Prędkość zwiększona: {target_fps} FPS")
+                    elif event.key == pygame.K_MINUS or event.key == pygame.K_KP_MINUS:
+                        target_fps = max(10, target_fps - 10)
+                        print(f"Prędkość zmniejszona: {target_fps} FPS")
 
-        # NEW: HUD overlay (draw on the same screen)
-        try:
-            surface = vis.screen
-            hud.draw(surface)
+            if not paused:
+                sim.update(on_before_remove=stats.update)
+
+            # Draw scene without flipping; we will overlay HUD and then flip once.
+            vis.draw(flip=False)
+
+            # HUD overlays (stats + charts + hotspots)
+            hud.draw(vis.screen, vis, stats, sim.current_time)
+
+            # FPS label
+            fps_text = f"Speed (FPS): {target_fps}"
+            if paused:
+                fps_text += " [PAUZA]"
+            text_surface = font.render(fps_text, True, (0, 0, 0))
+            vis.screen.blit(text_surface, (10, 10))
+
             pygame.display.flip()
-        except AttributeError:
-            # If Visualization already calls display.flip() internally and does
-            # not expose 'screen', integrate HUD drawing inside Visualization.
+            clock.tick(target_fps)
+
+    finally:
+        try:
+            stats.close()
+            print("Stats saved to:", writer.base_dir)
+        except Exception:
             pass
+        pygame.quit()
 
-        # --------------------
-        # FRAME RATE CONTROL
-        # --------------------
-        clock.tick(30)  # Maintain 30 FPS (33.3ms per frame)
-                        # This regulates simulation speed for consistent visualization
-
-    # Cleanup PyGame resources when simulation ends
-    stats.close()
-    pygame.quit()
 
 if __name__ == "__main__":
-    """
-    Application entry point when run as a script.
-    
-    This conditional ensures the main() function is only called when the file
-    is executed directly, not when imported as a module.
-    """
     main()

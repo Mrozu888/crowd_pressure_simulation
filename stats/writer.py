@@ -1,85 +1,94 @@
-"""
-CSV writers for statistics.
-
-This module exposes a small wrapper class responsible for opening CSV files,
-writing header rows, and appending frame-level and agent-level statistics.
-"""
-
 from __future__ import annotations
-from dataclasses import dataclass, asdict
-from typing import Dict, Any, Optional
+
 import csv
-import pathlib
+import os
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Dict, List, Optional
+
+import numpy as np
 
 
 @dataclass
-class AgentSummaryRow:
-    agent_id: int
-    kind: str
-    spawned_at: float
-    first_in_vestibule: Optional[float]
-    first_in_store: Optional[float]
-    last_in_vestibule: Optional[float]
-    last_in_store: Optional[float]
-    time_to_enter_store: Optional[float]
-    time_in_store: Optional[float]
-    time_in_vestibule: Optional[float]
-    total_idle_time: float
-    total_queue_time: float
-    total_distance: float
-    covid_compliant: Optional[bool]
+class StatsPaths:
+    base_dir: str
+    frames_csv: str
+    agents_csv: str
+    heatmap_npy: str
+    heatmap_csv: str
+    hotspots_csv: str
 
 
-@dataclass
-class FrameStatsRow:
-    t: float
-    n_agents: int
-    n_in_store: int
-    n_in_vestibule: int
-    n_in_street: int
-    flow_left_door_per_min: float
-    flow_top_door_per_min: float
-    flow_right_door_per_min: float
-    contacts_lt_1m: int
-    contacts_lt_covid: int
-    avg_speed: float
-    avg_speed_store: float
-    avg_speed_vestibule: float
-    queue_front_cashiers: int
-    density_store: float
-    density_vestibule: float
+class StatsWriter:
+    """Writes simulation statistics to CSV/NPY."""
 
+    def __init__(self, base_dir: Optional[str] = None):
+        if base_dir is None:
+            stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            base_dir = os.path.join("stats_output", stamp)
 
-class StatsCSVWriter:
-    """
-    Simple CSV writer wrapper. It owns two files:
-      - stats_agents.csv
-      - stats_frames.csv
-    """
+        os.makedirs(base_dir, exist_ok=True)
 
-    def __init__(self, base_dir: str | pathlib.Path = ".") -> None:
-        base_dir = pathlib.Path(base_dir)
-        base_dir.mkdir(parents=True, exist_ok=True)
+        self.paths = StatsPaths(
+            base_dir=base_dir,
+            frames_csv=os.path.join(base_dir, "stats_frames.csv"),
+            agents_csv=os.path.join(base_dir, "stats_agents.csv"),
+            heatmap_npy=os.path.join(base_dir, "stats_heatmap.npy"),
+            heatmap_csv=os.path.join(base_dir, "stats_heatmap.csv"),
+            hotspots_csv=os.path.join(base_dir, "stats_hotspots.csv"),
+        )
 
-        self._f_agents = (base_dir / "stats_agents.csv").open("w", newline="", encoding="utf-8")
-        self._f_frames = (base_dir / "stats_frames.csv").open("w", newline="", encoding="utf-8")
+        self._frames_f = open(self.paths.frames_csv, "w", newline="", encoding="utf-8")
+        self._agents_f = open(self.paths.agents_csv, "w", newline="", encoding="utf-8")
 
-        self._w_agents = csv.DictWriter(self._f_agents, fieldnames=list(AgentSummaryRow.__annotations__.keys()))
-        self._w_frames = csv.DictWriter(self._f_frames, fieldnames=list(FrameStatsRow.__annotations__.keys()))
+        self._frames_writer = None
+        self._agents_writer = None
 
-        self._w_agents.writeheader()
-        self._w_frames.writeheader()
+    @property
+    def base_dir(self) -> str:
+        return self.paths.base_dir
 
-    def write_agent_row(self, row: AgentSummaryRow) -> None:
-        self._w_agents.writerow(asdict(row))
+    def write_frame(self, row: Dict):
+        if self._frames_writer is None:
+            fieldnames = list(row.keys())
+            self._frames_writer = csv.DictWriter(self._frames_f, fieldnames=fieldnames)
+            self._frames_writer.writeheader()
+        self._frames_writer.writerow(row)
+        self._frames_f.flush()
 
-    def write_frame_row(self, row: FrameStatsRow) -> None:
-        self._w_frames.writerow(asdict(row))
+    def write_agent(self, row: Dict):
+        if self._agents_writer is None:
+            fieldnames = list(row.keys())
+            self._agents_writer = csv.DictWriter(self._agents_f, fieldnames=fieldnames)
+            self._agents_writer.writeheader()
+        self._agents_writer.writerow(row)
+        self._agents_f.flush()
 
-    def flush(self) -> None:
-        self._f_agents.flush()
-        self._f_frames.flush()
+    def save_heatmap(self, heatmap: np.ndarray, heat_x0: float, heat_y0: float, heat_cell: float):
+        np.save(self.paths.heatmap_npy, heatmap)
 
-    def close(self) -> None:
-        self._f_agents.close()
-        self._f_frames.close()
+        with open(self.paths.heatmap_csv, "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(["heat_x0", heat_x0])
+            w.writerow(["heat_y0", heat_y0])
+            w.writerow(["heat_cell", heat_cell])
+            w.writerow(["rows", heatmap.shape[0]])
+            w.writerow(["cols", heatmap.shape[1]])
+            w.writerow([])
+            for r in range(heatmap.shape[0]):
+                w.writerow([float(x) for x in heatmap[r, :]])
+
+    def save_hotspots(self, hotspots: List[Dict]):
+        if not hotspots:
+            return
+        with open(self.paths.hotspots_csv, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=list(hotspots[0].keys()))
+            w.writeheader()
+            for row in hotspots:
+                w.writerow(row)
+
+    def close(self):
+        try:
+            self._frames_f.close()
+        finally:
+            self._agents_f.close()
