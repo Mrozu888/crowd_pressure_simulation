@@ -125,8 +125,8 @@ class Visualization:
                                                                         self.CASH_REGISTER_COLOR)
 
         # Rysuj ścieżki
-        if hasattr(self.env, 'agents'):
-            self._draw_paths(self.env.agents)
+        # if hasattr(self.env, 'agents'):
+        #     self._draw_paths(self.env.agents)
 
         # Rysuj agentów
         if hasattr(self.env, 'agents'):
