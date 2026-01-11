@@ -72,6 +72,7 @@ CONFIG = {
             ((17.25, 11), (17.25, 2)),
             ((16.25, 11), (17.25, 11)),
             ((16.25, 2), (17.25, 2)),
+            ((16, 12), (20, 12)),
         ],
         "pallets": [],
          "cash_registers": [
@@ -127,7 +128,7 @@ CONFIG = {
     },
 
     "agent_generation": {
-        "spawn_rate": 0.2,
+        "spawn_rate": 0.35,
         "n_agents": 20,
         "max_spawn_time": 30.0,
 
@@ -144,44 +145,64 @@ CONFIG = {
         # "pos": (x, y) - gdzie agent ma podejść
         # "prob": 0.0-1.0 - szansa, że agent wybierze ten punkt
         "points_of_interest": [
-            {"name": "Pieczywo", "pos": (0.75, 3.0), "prob": 0.4},
-            {"name": "Pieczywo2", "pos": (0.75, 6.0), "prob": 0.4},
-            {"name": "Warzywa", "pos": (2, 6.0), "prob": 0.4},
-            {"name": "Warzywa2", "pos": (2, 9.0), "prob": 0.4},
-            {"name": "Mięso1", "pos": (0.75, 0.75), "prob": 0.3},
-            {"name": "Mięso2", "pos": (3, 0.75), "prob": 0.3},
-            {"name": "Mięso3", "pos": (4.5, 0.75), "prob": 0.3},
-            {"name": "Mięso4", "pos": (6.5, 0.75), "prob": 0.3},
-            {"name": "Mięso5", "pos": (8, 0.75), "prob": 0.3},
-            {"name": "Mięso6", "pos": (10, 0.75), "prob": 0.3},
-            {"name": "Mięso7", "pos": (12.5, 0.75), "prob": 0.3},
-            {"name": "Mięso8", "pos": (13, 0.75), "prob": 0.3},
-            {"name": "Mięso9", "pos": (15, 0.75), "prob": 0.3},
-            {"name": "Mięso10", "pos": (17, 0.75), "prob": 0.3},
-            {"name": "Mięso11", "pos": (18.5, 0.75), "prob": 0.3},
+            # --- ALEJA 1 (X ≈ 1.5) ---
+            {"name": "Aleja1_Północ", "pos": (1.5, 10.0), "prob": 0.2},
+            {"name": "Aleja1_Środek", "pos": (1.5, 6.0), "prob": 0.2},
+            {"name": "Aleja1_Południe", "pos": (1.5, 3.0), "prob": 0.2},
+            {"name": "Aleja1_Południe", "pos": (1.5, 9.0), "prob": 0.2},
 
-            {"name": "Słodycze", "pos": (4, 5.0), "prob": 0.1},
-            {"name": "Słodycze2", "pos": (6, 5.0), "prob": 0.4},
-            {"name": "Słodycze3", "pos": (6, 8.0), "prob": 0.3},
-            {"name": "Słodycze4", "pos": (5.5, 2.0), "prob": 0.4},
-            {"name": "Słodycze5", "pos": (5.5, 9.0), "prob": 0.3},
-            {"name": "Słodycze6", "pos": (9.5, 5.0), "prob": 0.6},
+            # --- ALEJA 2 (X ≈ 3.75) ---
+            {"name": "Aleja2_Północ", "pos": (3.75, 10.0), "prob": 0.15},
+            {"name": "Aleja2_Środek", "pos": (3.75, 6.0), "prob": 0.1},
+            {"name": "Aleja2_Południe", "pos": (3.75, 3.0), "prob": 0.2},
 
-            {"name": "Chemia", "pos": (11.5, 9.0), "prob": 0.2},
-            {"name": "Chemia", "pos": (11, 7.0), "prob": 0.2},
-            {"name": "Chemia", "pos": (10.5, 4.0), "prob": 0.2},
-            {"name": "Chemia", "pos": (11.5, 3.0), "prob": 0.2},
-            {"name": "Napoje", "pos": (7.5, 8.0), "prob": 0.4},
+            # --- ALEJA 3 (X ≈ 5.5) ---
+            {"name": "Aleja3_Północ", "pos": (5.5, 10.0), "prob": 0.3},
+            {"name": "Aleja3_Środek", "pos": (5.5, 8.0), "prob": 0.3},
+            {"name": "Aleja3_Południe", "pos": (5.5, 4.0), "prob": 0.3},
 
-            {"name": "Pieczywo", "pos": (13.5, 4.0), "prob": 0.8},
-            {"name": "Promocja", "pos": (17.5, 13.5), "prob": 0.3},
-            {"name": "Promocja", "pos": (18.5, 4), "prob": 0.2},
-            {"name": "Promocja", "pos": (18.5, 5.5), "prob": 0.4},
-            {"name": "Promocja", "pos": (17.5, 6), "prob": 0.2},
-            {"name": "Promocja", "pos": (17.5, 8), "prob": 0.2},
-            {"name": "Promocja", "pos": (18.5, 10), "prob": 0.3},
-            {"name": "Promocja", "pos": (17.5, 10), "prob": 0.3},
+            # --- ALEJA 4 (X ≈ 7.5) ---
+            {"name": "Aleja4_Północ", "pos": (7.5, 10.0), "prob": 0.35},
+            {"name": "Aleja4_Środek", "pos": (7.5, 5.0), "prob": 0.35},
+            {"name": "Aleja4_Południe", "pos": (7.5, 3.0), "prob": 0.35},
 
+            # --- ALEJA 5 (X ≈ 9.5) ---
+            {"name": "Aleja5_Północ", "pos": (9.5, 10.0), "prob": 0.2},
+            {"name": "Aleja5_Środek", "pos": (9.5, 6.0), "prob": 0.3},
+            {"name": "Aleja5_Południe", "pos": (9.5, 3.0), "prob": 0.4},
+
+            # --- ALEJA 6 (X ≈ 11.5) ---
+            {"name": "Aleja6_Północ", "pos": (11.5, 10.0), "prob": 0.35},
+            {"name": "Aleja6_Środek", "pos": (11.5, 6.0), "prob": 0.4},
+            {"name": "Aleja6_Południe", "pos": (11.5, 3.0), "prob": 0.1},
+
+            # --- ALEJA 7 (X ≈ 13.5) ---
+            {"name": "Aleja7_Północ", "pos": (13.5, 10.0), "prob": 0.35},
+            {"name": "Aleja7_Środek", "pos": (13.5, 6.0), "prob": 0.35},
+            {"name": "Aleja7_Południe", "pos": (13.5, 3.0), "prob": 0.35},
+
+            # --- ALEJA 8 (X ≈ 15.5) ---
+            {"name": "Aleja8_Północ", "pos": (15.5, 10.0), "prob": 0.3},
+            {"name": "Aleja8_Środek", "pos": (15.5, 6.0), "prob": 0.5},
+            {"name": "Aleja8_Południe", "pos": (15.5, 3.0), "prob": 0.3},
+
+            # --- ALEJA 9 (X ≈ 18) ---
+            {"name": "Aleja9_Północ", "pos": (18.0, 10.0), "prob": 0.4},
+            {"name": "Aleja9_Środek", "pos": (18.0, 6.0), "prob": 0.25},
+            {"name": "Aleja9_Południe", "pos": (18.0, 8.0), "prob": 0.3},
+            {"name": "Aleja9_Południe", "pos": (18.0, 4.5), "prob": 0.25},
+            {"name": "Aleja9_Południe", "pos": (18.0, 11.0), "prob": 0.5},
+
+            # --- ŚCIANA POŁUDNIOWA (PRZY MIĘSIE) ---
+            {"name": "Mięso1", "pos": (3.0, 1.25), "prob": 0.2},
+            {"name": "Mięso2", "pos": (6.0, 1.25), "prob": 0.2},
+            {"name": "Mięso3", "pos": (9.0, 1.25), "prob": 0.2},
+            {"name": "Mięso4", "pos": (12.0, 1.25), "prob": 0.2},
+            {"name": "Mięso5", "pos": (15.0, 1.25), "prob": 0.2},
+            {"name": "Mięso6", "pos": (18.0, 1.25), "prob": 0.2},
+
+
+            {"name": "Mięso6", "pos": (15.0, 13.25), "prob": 0.7},
         ]
     }
 ,

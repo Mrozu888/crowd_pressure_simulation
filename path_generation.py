@@ -8,42 +8,45 @@ def generate_shopping_path(zones_config, path_config=None):
     """
     path = []
 
-    def make_point(x, y, wait=0.0):
-        return {'pos': (x, y), 'wait': wait}
+    # Helper function - inline is faster usually, but func is cleaner
+    # Zmieniamy na tuple zamiast słownika od razu jeśli to możliwe,
+    # ale zachowujemy format słownika zgodnie z prośbą o brak zmian w logice.
 
-    # PROSTY SPAWN 
+    # 1. Spawn Point
     base_spawn = zones_config["spawn_point"]
-    rand_x = base_spawn[0] + np.random.uniform(-1, 1)
-    rand_y = base_spawn[1] + np.random.uniform(-1, 1)
+    # Używamy random.uniform zamiast np.random.uniform dla skalarnych wartości (jest szybsze w czystym Pythonie)
+    rand_x = base_spawn[0] + random.uniform(-1, 1)
+    rand_y = base_spawn[1] + random.uniform(-1, 1)
 
-    path.append(make_point(rand_x, rand_y, 0.0))
+    path.append({'pos': (rand_x, rand_y), 'wait': 0.0})
 
-    #  Wejście 
+    # 2. Wejście
     entrances = zones_config.get("entrance_points", [])
     if isinstance(entrances, list):
         for entry in entrances:
-            path.append(make_point(entry[0], entry[1], 0.0))
+            path.append({'pos': tuple(entry), 'wait': 0.0})
     elif isinstance(entrances, tuple):
-        path.append(make_point(entrances[0], entrances[1], 0.0))
+        path.append({'pos': entrances, 'wait': 0.0})
 
-    # Punkty Zakupowe (POI) z CZASEM 
+    # 3. Punkty Zakupowe (POI)
     possible_points = zones_config["points_of_interest"]
     selected_targets = []
 
     for poi in possible_points:
+        # Szybki check
         if random.random() < poi["prob"]:
-            px = poi["pos"][0] + np.random.uniform(-0.3, 0.3)
-            py = poi["pos"][1] + np.random.uniform(-0.3, 0.3)
+            pos = poi["pos"]
+            px = pos[0] + random.uniform(-0.3, 0.3)
+            py = pos[1] + random.uniform(-0.3, 0.3)
 
-            #  LOSOWANIE CZASU CZEKANIA 
-            # Np. 2 do 5 sekund stania przy półce
             wait_time = random.uniform(2.0, 5.0)
+            selected_targets.append({'pos': (px, py), 'wait': wait_time})
 
-            selected_targets.append(make_point(px, py, wait_time))
+    # 4. Sortowanie (kluczowa logika zachowana)
+    # Sortujemy tylko jeśli mamy więcej niż 1 punkt, oszczędza wywołanie
+    if len(selected_targets) > 1:
+        selected_targets.sort(key=lambda p: p['pos'][0])
 
-    #  Sortowanie 
-    selected_targets.sort(key=lambda p: p['pos'][0]) 
     path.extend(selected_targets)
-
 
     return path

@@ -34,8 +34,8 @@ class Environment:
             self.height,
             all_obstacles,   # jako „walls”
             [],              # osobno „shelves” – nie używane, więc puste
-            grid_size=0.1,
-            obstacle_buffer=0.15
+            grid_size=0.2,
+            obstacle_buffer=0.25
         )
 
         # Model sił społecznych
