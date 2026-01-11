@@ -94,37 +94,43 @@ CONFIG = {
         {"pos": (14, 14.25), "size": (0.6, 0.6)},
     ],
         "cash_payment": [
-            # (5.3, 13),
-            # (6.8, 13),
-            # (8.3, 13),
-            # # ###
-            # (10, 12.75),
-            # (10, 13.4),
-            # (11.1, 12.75),
-            # (11.1, 13.4),
+            (5.3, 13),
+            (6.8, 13),
+            (8.3, 13),
             # ###
-            #(10.1, 14.25),
-            #(11, 14.25),
-            # ###
-            #(12.75, 12.7),
-            #(12.75, 13.4),
+            (10, 12.75),
+            (10, 13.4),
+            (11.1, 12.75),
+            (11.1, 13.4),
             ###
+            # (10.1, 14.25),
+            # (11, 14.25),
+            ###
+            (12.75, 12.7),
+            (12.75, 13.4),
+            ##
             (13.85, 12.35),
             (13.85, 13.1),
-            #(13.85, 13.8),
-            #(13.85, 14.6),
+            (13.85, 13.8),
+            (13.85, 14.6),
         ],
 
 
     },
 
     "sfm": {
-        "A": 2.0,
-        "B": 0.8,
+#         A (float): Strength of agent-agent repulsion force
+#         B (float): Range of agent-agent repulsion force
+#         A_w (float): Strength of agent-wall repulsion force
+#         B_w (float): Range of agent-wall repulsion force
+#         desired_speed (float): Preferred movement speed for agents
+#         relax_time (float): Characteristic reaction time for velocity adjustments
+        "A": 1.5,
+        "B": 0.4,
         "A_w": 10.0,
-        "B_w": 0.1,
-        "desired_speed": 1.3,
-        "tau": 0.5,
+        "B_w": 0.08,
+        "desired_speed": 1.2,
+        "tau": 0.6,
     },
 
     "agent_generation": {
@@ -146,7 +152,7 @@ CONFIG = {
         # "prob": 0.0-1.0 - szansa, że agent wybierze ten punkt
         "points_of_interest": [
     # --- ALEJA 1 (X ≈ 1.5) - Np. Warzywa/Owoce (Częste, ale szybkie zakupy) ---
-    {"name": "A1_Wejście_Promocja", "pos": (1.5, 2.0), "prob": 0.25},
+    {"name": "A1_Wejście_Promocja", "pos": (1.5, 2.0), "prob": 0.2},
     {"name": "A1_Dół",              "pos": (1.5, 4.0), "prob": 0.15},
     {"name": "A1_Środek_Dół",       "pos": (1.5, 5.5), "prob": 0.10},
     {"name": "A1_Środek_Góra",      "pos": (1.5, 7.5), "prob": 0.12},
@@ -169,26 +175,27 @@ CONFIG = {
 
     # --- ALEJA 4 (X ≈ 7.5) - Np. Makarony/Kasze (Standard) ---
     {"name": "A4_Dół",              "pos": (7.5, 3.0), "prob": 0.10},
-    {"name": "A4_Środek_Dół",       "pos": (7.5, 5.0), "prob": 0.08},
-    {"name": "A4_Środek_Góra",      "pos": (7.5, 7.5), "prob": 0.09},
+    {"name": "A4_Środek_Dół",       "pos": (7.5, 5.0), "prob": 0.18},
+    {"name": "A4_Środek_Góra",      "pos": (7.5, 7.5), "prob": 0.15},
     {"name": "A4_Góra",             "pos": (7.5, 9.5), "prob": 0.11},
 
     # --- ALEJA 5 (X ≈ 9.5) - Np. Napoje/Soki (Ciężkie, więc rzadziej na początku) ---
-    {"name": "A5_Dół",              "pos": (9.5, 2.5), "prob": 0.08},
+    {"name": "A5_Dół",              "pos": (9.5, 2.5), "prob": 0.18},
     {"name": "A5_Środek",           "pos": (9.5, 6.0), "prob": 0.15},
     {"name": "A5_Góra",             "pos": (9.5, 9.0), "prob": 0.12},
-    {"name": "A5_Szczyt",           "pos": (9.5, 11.0), "prob": 0.07},
+    {"name": "A5_Szczyt",           "pos": (9.5, 11.0), "prob": 0.17},
 
     # --- ALEJA 6 (X ≈ 11.5) - Np. Kawa/Herbata ---
     {"name": "A6_Dół",              "pos": (11.5, 3.0), "prob": 0.14},
-    {"name": "A6_Środek_Dół",       "pos": (11.5, 5.5), "prob": 0.09},
+    {"name": "A6_Środek_Dół",       "pos": (11.5, 5.5), "prob": 0.29},
     {"name": "A6_Środek_Góra",      "pos": (11.5, 8.0), "prob": 0.11},
     {"name": "A6_Szczyt",           "pos": (11.5, 10.5), "prob": 0.13},
 
     # --- ALEJA 7 (X ≈ 13.5) - Np. Konserwy/Dżemy ---
-    {"name": "A7_Dół",              "pos": (13.5, 2.5), "prob": 0.07},
-    {"name": "A7_Środek",           "pos": (13.5, 6.0), "prob": 0.06},
-    {"name": "A7_Góra",             "pos": (13.5, 9.5), "prob": 0.08},
+    {"name": "A7_Dół",              "pos": (13.5, 2.5), "prob": 0.17},
+    {"name": "A7_Środek",           "pos": (13.5, 6.0), "prob": 0.16},
+    {"name": "A7_Środek",           "pos": (13.5, 6.0), "prob": 0.13},
+    {"name": "A7_Góra",             "pos": (13.5, 9.5), "prob": 0.18},
 
     # --- ALEJA 8 (X ≈ 15.5) - Np. Pieczywo (BARDZO POPULARNE - Hotspot) ---
     {"name": "A8_Pieczywo_Dół",     "pos": (15.5, 2.5), "prob": 0.35}, # Duża szansa
@@ -199,9 +206,9 @@ CONFIG = {
     # --- ALEJA 9 (X ≈ 18) - Np. Nabiał/Mleko (BARDZO POPULARNE - Hotspot) ---
     {"name": "A9_Jogurty",          "pos": (18.0, 2.0), "prob": 0.18},
     {"name": "A9_Sery",             "pos": (18.0, 4.5), "prob": 0.22},
-    {"name": "A9_Mleko_Środek",     "pos": (18.0, 7.0), "prob": 0.40}, # Bardzo duża szansa (Mleko)
+    {"name": "A9_Mleko_Środek",     "pos": (18.0, 7.0), "prob": 0.20},
     {"name": "A9_Jajka",            "pos": (18.0, 9.5), "prob": 0.25},
-    {"name": "A9_Masło_Szczyt",     "pos": (18.0, 11.5), "prob": 0.30},
+    {"name": "A9_Masło_Szczyt",     "pos": (18.0, 11.5), "prob": 0.10},
 
     # --- ŚCIANA POŁUDNIOWA - Mięso/Wędliny/Lada ---
     {"name": "Lada_Mięsna_1",       "pos": (3.0, 1.25), "prob": 0.12},
