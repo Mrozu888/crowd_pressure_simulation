@@ -1,3 +1,4 @@
+import random
 import numpy as np
 import random
 
@@ -14,7 +15,14 @@ class Simulation:
         # Timer do odliczania czasu do kolejnego spawnu
         self.time_until_next_spawn = 0.0
 
-    def update(self):
+        # Konfiguracja spawnowania (jak w master)
+        gen_conf = config["agent_generation"]
+        self.spawn_rate = gen_conf.get("spawn_rate", 0.2)  # agenci / sekundę
+
+        # Timer ile zostało do kolejnego spawnu
+        self.time_until_next_spawn = 0.0
+
+    def update(self, on_before_remove=None):
         """
         Jeden krok symulacji.
         """

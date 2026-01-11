@@ -73,9 +73,47 @@ CONFIG = {
             ((16.25, 2), (17.25, 2)),
         ],
         "pallets": [],
-        "cash_registers": [
-            {"pos": (14, 14.25), "size": (0.6, 0.6)},
-        ]
+         "cash_registers": [
+        {"pos": (5.5, 12), "size": (0.6, 1.5)},
+        {"pos": (7, 12), "size": (0.6, 1.5)},
+        {"pos": (8.5, 12), "size": (0.6, 1.5)},
+        {"pos": (9.25, 12.25), "size": (0.6, 0.6)},
+        {"pos": (9.25, 13), "size": (0.6, 0.6)},
+        #{"pos": (9.75, 14.35), "size": (0.6, 0.6)},
+        #{"pos": (10.75, 14.35), "size": (0.6, 0.6)},
+        #{"pos": (12.5, 14.35), "size": (0.6, 0.6)},
+        {"pos": (11.25, 12.25), "size": (0.6, 0.6)},
+        {"pos": (11.25, 13), "size": (0.6, 0.6)},
+        {"pos": (12, 12.25), "size": (0.6, 0.6)},
+        {"pos": (12, 13), "size": (0.6, 0.6)},
+        {"pos": (14, 12), "size": (0.6, 0.6)},
+        {"pos": (14, 12.75), "size": (0.6, 0.6)},
+        {"pos": (14, 13.5), "size": (0.6, 0.6)},
+        {"pos": (14, 14.25), "size": (0.6, 0.6)},
+    ],
+        "cash_payment": [
+            # (5.3, 13),
+            # (6.8, 13),
+            # (8.3, 13),
+            # # ###
+            # (10, 12.75),
+            # (10, 13.4),
+            # (11.1, 12.75),
+            # (11.1, 13.4),
+            # ###
+            #(10.1, 14.25),
+            #(11, 14.25),
+            # ###
+            #(12.75, 12.7),
+            #(12.75, 13.4),
+            ###
+            (13.85, 12.35),
+            (13.85, 13.1),
+            #(13.85, 13.8),
+            #(13.85, 14.6),
+        ],
+
+
     },
 
     "sfm": {
@@ -118,5 +156,21 @@ CONFIG = {
             {"name": "Pieczywo", "pos": (13.5, 4.0), "prob": 0.8},
             {"name": "Promocja", "pos": (15.5, 13.5), "prob": 0.1},
         ]
+    }
+,
+
+    # Optional: real-world measurements for live comparison in HUD.
+    # Enable and provide a CSV with at least: time_s, entries_per_min, exits_per_min, queue_len
+    "real_data": {
+        "enabled": False,
+        "csv_path": "real_data/observations.csv",
+        "time_col": "time_s",
+        "column_map": {
+            "queue_len": "queue_len",
+            "entries_per_min": "entries_per_min",
+            "exits_per_min": "exits_per_min",
+            "inside": "inside",
+            "density_store": "density_store"
+        }
     }
 }

@@ -1,8 +1,41 @@
+import os
 import pygame
+
 from Config import CONFIG
 from Environment import Environment
 from Simulation import Simulation
 from Visualization import Visualization
+
+from stats import StatsGeometry, StatsManager, StatsWriter, RealDataSeries, StatsHUD
+
+
+def _load_real_data_from_config():
+    rd_conf = CONFIG.get("real_data", {}) if isinstance(CONFIG, dict) else {}
+    if not rd_conf or not rd_conf.get("enabled", False):
+        return None
+
+    csv_path = rd_conf.get("csv_path", "")
+    if not csv_path:
+        return None
+    if not os.path.isfile(csv_path):
+        return None
+
+    time_col = rd_conf.get("time_col", "time_s")
+    column_map = rd_conf.get(
+        "column_map",
+        {
+            "queue_len": "queue_len",
+            "entries_per_min": "entries_per_min",
+            "exits_per_min": "exits_per_min",
+            "inside": "inside",
+            "density_store": "density_store",
+        },
+    )
+
+    try:
+        return RealDataSeries.load_csv(csv_path, time_col=time_col, column_map=column_map)
+    except Exception:
+        return None
 
 
 def main():

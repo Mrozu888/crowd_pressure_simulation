@@ -7,26 +7,37 @@ from PathFinding import GridMap
 
 class Environment:
     def __init__(self, config):
+        self.config = config
         env_conf = config["environment"]
         sfm_conf = config["sfm"]
 
         self.walls = env_conf["walls"]
         self.shelves = env_conf["shelves"]
+        # Optional elements used by visualization/stats
+        self.doors = env_conf.get("doors", [])
+        self.pallets = env_conf.get("pallets", [])
         self.cash_registers = env_conf["cash_registers"]
 
         self.scale = env_conf["scale"]
         self.width = env_conf["width"]
         self.height = env_conf["height"]
 
+        all_obstacles = (
+            self.walls
+            + self.shelves
+            + self._cashier_rects_to_lines()
+        )
+
         self.grid_map = GridMap(
             self.width,
             self.height,
-            self.walls,
-            self.shelves,
+            all_obstacles,   # jako „walls”
+            [],              # osobno „shelves” – nie używane, więc puste
             grid_size=0.1,
-            obstacle_buffer=0.3
+            obstacle_buffer=0.15
         )
 
+        # Model sił społecznych
         self.model = SocialForceModel(sfm_conf)
 
         # Przechowujemy konfigurację do późniejszego spawnowania
