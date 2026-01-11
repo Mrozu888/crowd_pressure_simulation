@@ -118,7 +118,7 @@ class Visualization:
             self._draw_rect_objects(self.env.cash_registers, self.CASH_REGISTER_COLOR)
 
         if hasattr(self.env, "agents"):
-            self._draw_paths(self.env.agents)
+            # self._draw_paths(self.env.agents)
             self._draw_agents(self.env.agents)
 
         if flip:
