@@ -48,8 +48,8 @@ class Simulation:
                 # Wyznacz losowy odstęp do kolejnego spawnu (jak w master)
                 base_interval = 1.0 / self.spawn_rate
                 self.time_until_next_spawn = random.uniform(
-                    base_interval * 0.8,
-                    base_interval * 1.2,
+                    base_interval * 0.2,
+                    base_interval * 1.8,
                 )
 
         #  AKTYWACJA AGENTÓW Z OPÓŹNIENIEM 

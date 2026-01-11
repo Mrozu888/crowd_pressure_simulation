@@ -125,8 +125,8 @@ CONFIG = {
 #         B_w (float): Range of agent-wall repulsion force
 #         desired_speed (float): Preferred movement speed for agents
 #         relax_time (float): Characteristic reaction time for velocity adjustments
-        "A": 1.5,
-        "B": 0.4,
+        "A": 1.6,
+        "B": 0.5,
         "A_w": 10.0,
         "B_w": 0.08,
         "desired_speed": 1.2,
@@ -134,13 +134,13 @@ CONFIG = {
     },
 
     "agent_generation": {
-        "spawn_rate": 0.33,
+        "spawn_rate": 0.3,
         # "n_agents": 20,
         # "max_spawn_time": 30.0,
 
         # Stałe punkty infrastruktury
         "spawn_point": (-1.5, 14.0),     # Punkt startu poza sklepem
-        "entrance_points": [(1.7, 12.5)],   # Punkt zaraz po wejściu
+        "entrance_points": [(0.3, 13.75),(1.7, 12.5)],   # Punkt zaraz po wejściu
         #"cashier_point": (13.5, 13.5),   # Punkt przy kasie
         #"exit_point": (10, 14.0),       # Punkt wyjścia
         "exit_sequence": [
