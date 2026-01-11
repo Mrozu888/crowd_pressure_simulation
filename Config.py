@@ -1,6 +1,6 @@
 CONFIG = {
     "dt": 0.05,
-    "steps": 10000,
+    # "steps": 10000, # To już nie jest potrzebne, pętla będzie nieskończona w Main
 
     "environment": {
         "scale": 40,
@@ -20,7 +20,6 @@ CONFIG = {
         "doors": [
             ((0, 13), (0, 14.5)),
         ],
-        # Twoje półki (bez zmian)
         "shelves": [
             ((14.75, 12), (14.75, 14.85)),
             ((15, 12), (15, 14.85)),
@@ -127,22 +126,14 @@ CONFIG = {
     },
 
     "agent_generation": {
-        "spawn_rate": 0.2,
-        "n_agents": 20,
-        "max_spawn_time": 30.0,
+        # --- ZMIANA: Zamiast "n_agents", definiujemy częstotliwość ---
+        "spawn_rate": 0.2,  # Agenci na sekundę (np. 0.8 oznacza agenta co ok. 1.25 sekundy)
 
-        # Stałe punkty infrastruktury
-        "spawn_point": (-1.5, 14.0),     # Punkt startu poza sklepem
-        "entrance_points": [(1.7, 12.5)],   # Punkt zaraz po wejściu
-        #"cashier_point": (13.5, 13.5),   # Punkt przy kasie
-        #"exit_point": (10, 14.0),       # Punkt wyjścia
-        "exit_sequence": [
-            (4.5, 14.0),
-            (0.0, 14.0)
-        ],
-        # Lista punktów zakupowych do wylosowania
-        # "pos": (x, y) - gdzie agent ma podejść
-        # "prob": 0.0-1.0 - szansa, że agent wybierze ten punkt
+        "spawn_point": (-1.5, 14.0),
+        "entrance_points": [(1.7, 12.5)],
+        "cashier_point": (13.5, 13.5),
+        "exit_point": (10, 14.0),
+
         "points_of_interest": [
             {"name": "Pieczywo", "pos": (0.75, 3.0), "prob": 0.4},
             {"name": "Pieczywo2", "pos": (0.75, 6.0), "prob": 0.4},
@@ -159,29 +150,11 @@ CONFIG = {
             {"name": "Mięso9", "pos": (15, 0.75), "prob": 0.3},
             {"name": "Mięso10", "pos": (17, 0.75), "prob": 0.3},
             {"name": "Mięso11", "pos": (18.5, 0.75), "prob": 0.3},
-
-            {"name": "Słodycze", "pos": (4, 5.0), "prob": 0.1},
-            {"name": "Słodycze2", "pos": (6, 5.0), "prob": 0.4},
-            {"name": "Słodycze3", "pos": (6, 8.0), "prob": 0.3},
-            {"name": "Słodycze4", "pos": (5.5, 2.0), "prob": 0.4},
-            {"name": "Słodycze5", "pos": (5.5, 9.0), "prob": 0.3},
-            {"name": "Słodycze6", "pos": (9.5, 5.0), "prob": 0.6},
-
-            {"name": "Chemia", "pos": (11.5, 9.0), "prob": 0.2},
-            {"name": "Chemia", "pos": (11, 7.0), "prob": 0.2},
-            {"name": "Chemia", "pos": (10.5, 4.0), "prob": 0.2},
-            {"name": "Chemia", "pos": (11.5, 3.0), "prob": 0.2},
             {"name": "Napoje", "pos": (7.5, 8.0), "prob": 0.4},
-
+            {"name": "Słodycze", "pos": (9.5, 5.0), "prob": 0.6},
+            {"name": "Chemia", "pos": (11.5, 9.0), "prob": 0.2},
             {"name": "Pieczywo", "pos": (13.5, 4.0), "prob": 0.8},
-            {"name": "Promocja", "pos": (17.5, 13.5), "prob": 0.3},
-            {"name": "Promocja", "pos": (18.5, 4), "prob": 0.2},
-            {"name": "Promocja", "pos": (18.5, 5.5), "prob": 0.4},
-            {"name": "Promocja", "pos": (17.5, 6), "prob": 0.2},
-            {"name": "Promocja", "pos": (17.5, 8), "prob": 0.2},
-            {"name": "Promocja", "pos": (18.5, 10), "prob": 0.3},
-            {"name": "Promocja", "pos": (17.5, 10), "prob": 0.3},
-
+            {"name": "Promocja", "pos": (15.5, 13.5), "prob": 0.1},
         ]
     }
 ,

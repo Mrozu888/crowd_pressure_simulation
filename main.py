@@ -39,79 +39,97 @@ def _load_real_data_from_config():
 
 
 def main():
-    pygame.init()
-    pygame.font.init()
+    """
+    Główna pętla symulacji z kontrolą prędkości.
+    """
 
-    font = pygame.font.SysFont(None, 24)
-    small_font = pygame.font.SysFont(None, 20)
+    # Inicjalizacja PyGame
+    pygame.init()
+
+    # Inicjalizacja czcionki do wyświetlania prędkości
+    pygame.font.init()
+    font = pygame.font.SysFont('Arial', 24)
 
     clock = pygame.time.Clock()
 
+    # Inicjalizacja komponentów
     env = Environment(CONFIG)
     sim = Simulation(env, CONFIG)
     vis = Visualization(env)
 
-    # Stats (CSV + heatmap + live HUD)
-    writer = StatsWriter()
-    geom = StatsGeometry.from_environment(env)
-    stats = StatsManager(geom, writer)
-
-    real_data = _load_real_data_from_config()
-    hud = StatsHUD(font=font, small_font=small_font, real_data=real_data)
-
     running = True
     paused = False
+
+    # Domyślna prędkość (klatki na sekundę)
+    # Standardowo 60. Im więcej, tym szybciej symulacja "płynie".
     target_fps = 60
 
-    try:
-        while running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
+    print("Symulacja uruchomiona.")
+    print("Sterowanie:")
+    print("  ESC   - Wyjście")
+    print("  SPACJA- Pauza")
+    print("  + / - - Przyspiesz / Zwolnij")
+
+    # ======================
+    # GŁÓWNA PĘTLA
+    # ======================
+    while running:
+        # ----------------------
+        # 1. OBSŁUGA ZDARZEŃ
+        # ----------------------
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
                     running = False
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        running = False
-                    elif event.key == pygame.K_SPACE:
-                        paused = not paused
 
-                    # HUD toggles
-                    elif event.key in (pygame.K_F1, pygame.K_g, pygame.K_h, pygame.K_r):
-                        hud.handle_key(event.key)
+                # Pauza
+                elif event.key == pygame.K_SPACE:
+                    paused = not paused
 
-                    # Speed control
-                    elif event.key == pygame.K_EQUALS or event.key == pygame.K_KP_PLUS:
-                        target_fps = min(300, target_fps + 10)
-                        print(f"Prędkość zwiększona: {target_fps} FPS")
-                    elif event.key == pygame.K_MINUS or event.key == pygame.K_KP_MINUS:
-                        target_fps = max(10, target_fps - 10)
-                        print(f"Prędkość zmniejszona: {target_fps} FPS")
+                # Przyspieszanie (Klawisz '=' to standardowy plus, K_KP_PLUS to numeryczny)
+                elif event.key == pygame.K_EQUALS or event.key == pygame.K_KP_PLUS:
+                    target_fps += 10
+                    if target_fps > 300: target_fps = 300  # Limit max
+                    print(f"Prędkość zwiększona: {target_fps} FPS")
 
-            if not paused:
-                sim.update(on_before_remove=stats.update)
+                # Zwalnianie
+                elif event.key == pygame.K_MINUS or event.key == pygame.K_KP_MINUS:
+                    target_fps -= 10
+                    if target_fps < 10: target_fps = 10  # Limit min
+                    print(f"Prędkość zmniejszona: {target_fps} FPS")
 
-            # Draw scene without flipping; we will overlay HUD and then flip once.
-            vis.draw(flip=False)
+        # --------------------
+        # 2. AKTUALIZACJA FIZYKI
+        # --------------------
+        if not paused:
+            sim.update()
 
-            # HUD overlays (stats + charts + hotspots)
-            hud.draw(vis.screen, vis, stats, sim.current_time)
+            # --------------------
+        # 3. RYSOWANIE
+        # --------------------
+        vis.draw()
 
-            # FPS label
-            fps_text = f"Speed (FPS): {target_fps}"
-            if paused:
-                fps_text += " [PAUZA]"
-            text_surface = font.render(fps_text, True, (0, 0, 0))
-            vis.screen.blit(text_surface, (10, 10))
+        # Rysowanie informacji o prędkości na ekranie
+        fps_text = f"Speed (FPS): {target_fps}"
+        if paused: fps_text += " [PAUZA]"
 
-            pygame.display.flip()
-            clock.tick(target_fps)
+        # Tworzenie napisu (kolor czarny)
+        text_surface = font.render(fps_text, True, (0, 0, 0))
+        # Wyświetlenie w lewym górnym rogu (10, 10)
+        vis.screen.blit(text_surface, (10, 10))
 
-    finally:
-        try:
-            stats.close()
-            print("Stats saved to:", writer.base_dir)
-        except Exception:
-            pass
-        pygame.quit()
+        # Konieczne odświeżenie ekranu po dodaniu napisu
+        pygame.display.flip()
+
+        # --------------------
+        # 4. KONTROLA CZASU
+        # --------------------
+        # Tutaj używamy naszej zmiennej target_fps
+        clock.tick(target_fps)
+
+    pygame.quit()
 
 
 if __name__ == "__main__":
