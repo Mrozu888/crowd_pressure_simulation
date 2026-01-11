@@ -129,6 +129,9 @@ class StatsManager:
         speed_sum = 0.0
         speed_n = 0
 
+        # Lista ID agentów do usunięcia w tym kroku
+        agents_to_remove = []
+
         for agent in agents:
             if not getattr(agent, "active", True):
                 continue
@@ -184,6 +187,13 @@ class StatsManager:
                 exits_step += 1
                 self._exits_total += 1
                 self._write_agent_row(st)
+                # Oznaczamy do usunięcia ze słownika śledzenia, aby zwolnić pamięć
+                agents_to_remove.append(st.agent_id)
+
+        # Usuwamy zakończonych agentów ze słownika
+        for aid in agents_to_remove:
+            if aid in self._agents:
+                del self._agents[aid]
 
         queue_len = 0
         service_n = 0

@@ -61,7 +61,7 @@ def main():
 
     running = True
     paused = False
-    target_fps = 60
+    target_fps = 30
 
     try:
         while running:

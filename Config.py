@@ -128,9 +128,9 @@ CONFIG = {
     },
 
     "agent_generation": {
-        "spawn_rate": 0.35,
-        "n_agents": 20,
-        "max_spawn_time": 30.0,
+        "spawn_rate": 0.33,
+        # "n_agents": 20,
+        # "max_spawn_time": 30.0,
 
         # Stałe punkty infrastruktury
         "spawn_point": (-1.5, 14.0),     # Punkt startu poza sklepem
@@ -145,65 +145,75 @@ CONFIG = {
         # "pos": (x, y) - gdzie agent ma podejść
         # "prob": 0.0-1.0 - szansa, że agent wybierze ten punkt
         "points_of_interest": [
-            # --- ALEJA 1 (X ≈ 1.5) ---
-            {"name": "Aleja1_Północ", "pos": (1.5, 10.0), "prob": 0.2},
-            {"name": "Aleja1_Środek", "pos": (1.5, 6.0), "prob": 0.2},
-            {"name": "Aleja1_Południe", "pos": (1.5, 3.0), "prob": 0.2},
-            {"name": "Aleja1_Południe", "pos": (1.5, 9.0), "prob": 0.2},
+    # --- ALEJA 1 (X ≈ 1.5) - Np. Warzywa/Owoce (Częste, ale szybkie zakupy) ---
+    {"name": "A1_Wejście_Promocja", "pos": (1.5, 2.0), "prob": 0.25},
+    {"name": "A1_Dół",              "pos": (1.5, 4.0), "prob": 0.15},
+    {"name": "A1_Środek_Dół",       "pos": (1.5, 5.5), "prob": 0.10},
+    {"name": "A1_Środek_Góra",      "pos": (1.5, 7.5), "prob": 0.12},
+    {"name": "A1_Góra",             "pos": (1.5, 9.5), "prob": 0.15},
+    {"name": "A1_Szczyt",           "pos": (1.5, 11.0), "prob": 0.08},
 
-            # --- ALEJA 2 (X ≈ 3.75) ---
-            {"name": "Aleja2_Północ", "pos": (3.75, 10.0), "prob": 0.15},
-            {"name": "Aleja2_Środek", "pos": (3.75, 6.0), "prob": 0.1},
-            {"name": "Aleja2_Południe", "pos": (3.75, 3.0), "prob": 0.2},
+    # --- ALEJA 2 (X ≈ 3.75) - Np. Chemia (Rzadziej wybierane) ---
+    {"name": "A2_Dół",              "pos": (3.75, 2.5), "prob": 0.05},
+    {"name": "A2_Środek_Dół",       "pos": (3.75, 4.5), "prob": 0.06},
+    {"name": "A2_Środek",           "pos": (3.75, 6.5), "prob": 0.04},
+    {"name": "A2_Środek_Góra",      "pos": (3.75, 8.5), "prob": 0.07},
+    {"name": "A2_Szczyt",           "pos": (3.75, 10.5), "prob": 0.05},
 
-            # --- ALEJA 3 (X ≈ 5.5) ---
-            {"name": "Aleja3_Północ", "pos": (5.5, 10.0), "prob": 0.3},
-            {"name": "Aleja3_Środek", "pos": (5.5, 8.0), "prob": 0.3},
-            {"name": "Aleja3_Południe", "pos": (5.5, 4.0), "prob": 0.3},
+    # --- ALEJA 3 (X ≈ 5.5) - Np. Słodycze/Przekąski (Impulsowe) ---
+    {"name": "A3_Dół_Promocja",     "pos": (5.5, 2.0), "prob": 0.18},
+    {"name": "A3_Dół",              "pos": (5.5, 4.0), "prob": 0.12},
+    {"name": "A3_Środek",           "pos": (5.5, 6.5), "prob": 0.15},
+    {"name": "A3_Góra",             "pos": (5.5, 9.0), "prob": 0.10},
+    {"name": "A3_Szczyt",           "pos": (5.5, 11.0), "prob": 0.08},
 
-            # --- ALEJA 4 (X ≈ 7.5) ---
-            {"name": "Aleja4_Północ", "pos": (7.5, 10.0), "prob": 0.35},
-            {"name": "Aleja4_Środek", "pos": (7.5, 5.0), "prob": 0.35},
-            {"name": "Aleja4_Południe", "pos": (7.5, 3.0), "prob": 0.35},
+    # --- ALEJA 4 (X ≈ 7.5) - Np. Makarony/Kasze (Standard) ---
+    {"name": "A4_Dół",              "pos": (7.5, 3.0), "prob": 0.10},
+    {"name": "A4_Środek_Dół",       "pos": (7.5, 5.0), "prob": 0.08},
+    {"name": "A4_Środek_Góra",      "pos": (7.5, 7.5), "prob": 0.09},
+    {"name": "A4_Góra",             "pos": (7.5, 9.5), "prob": 0.11},
 
-            # --- ALEJA 5 (X ≈ 9.5) ---
-            {"name": "Aleja5_Północ", "pos": (9.5, 10.0), "prob": 0.2},
-            {"name": "Aleja5_Środek", "pos": (9.5, 6.0), "prob": 0.3},
-            {"name": "Aleja5_Południe", "pos": (9.5, 3.0), "prob": 0.4},
+    # --- ALEJA 5 (X ≈ 9.5) - Np. Napoje/Soki (Ciężkie, więc rzadziej na początku) ---
+    {"name": "A5_Dół",              "pos": (9.5, 2.5), "prob": 0.08},
+    {"name": "A5_Środek",           "pos": (9.5, 6.0), "prob": 0.15},
+    {"name": "A5_Góra",             "pos": (9.5, 9.0), "prob": 0.12},
+    {"name": "A5_Szczyt",           "pos": (9.5, 11.0), "prob": 0.07},
 
-            # --- ALEJA 6 (X ≈ 11.5) ---
-            {"name": "Aleja6_Północ", "pos": (11.5, 10.0), "prob": 0.35},
-            {"name": "Aleja6_Środek", "pos": (11.5, 6.0), "prob": 0.4},
-            {"name": "Aleja6_Południe", "pos": (11.5, 3.0), "prob": 0.1},
+    # --- ALEJA 6 (X ≈ 11.5) - Np. Kawa/Herbata ---
+    {"name": "A6_Dół",              "pos": (11.5, 3.0), "prob": 0.14},
+    {"name": "A6_Środek_Dół",       "pos": (11.5, 5.5), "prob": 0.09},
+    {"name": "A6_Środek_Góra",      "pos": (11.5, 8.0), "prob": 0.11},
+    {"name": "A6_Szczyt",           "pos": (11.5, 10.5), "prob": 0.13},
 
-            # --- ALEJA 7 (X ≈ 13.5) ---
-            {"name": "Aleja7_Północ", "pos": (13.5, 10.0), "prob": 0.35},
-            {"name": "Aleja7_Środek", "pos": (13.5, 6.0), "prob": 0.35},
-            {"name": "Aleja7_Południe", "pos": (13.5, 3.0), "prob": 0.35},
+    # --- ALEJA 7 (X ≈ 13.5) - Np. Konserwy/Dżemy ---
+    {"name": "A7_Dół",              "pos": (13.5, 2.5), "prob": 0.07},
+    {"name": "A7_Środek",           "pos": (13.5, 6.0), "prob": 0.06},
+    {"name": "A7_Góra",             "pos": (13.5, 9.5), "prob": 0.08},
 
-            # --- ALEJA 8 (X ≈ 15.5) ---
-            {"name": "Aleja8_Północ", "pos": (15.5, 10.0), "prob": 0.3},
-            {"name": "Aleja8_Środek", "pos": (15.5, 6.0), "prob": 0.5},
-            {"name": "Aleja8_Południe", "pos": (15.5, 3.0), "prob": 0.3},
+    # --- ALEJA 8 (X ≈ 15.5) - Np. Pieczywo (BARDZO POPULARNE - Hotspot) ---
+    {"name": "A8_Pieczywo_Dół",     "pos": (15.5, 2.5), "prob": 0.35}, # Duża szansa
+    {"name": "A8_Pieczywo_Środek",  "pos": (15.5, 5.0), "prob": 0.20},
+    {"name": "A8_Bułki_Góra",       "pos": (15.5, 8.0), "prob": 0.30},
+    {"name": "A8_Szczyt",           "pos": (15.5, 10.5), "prob": 0.10},
 
-            # --- ALEJA 9 (X ≈ 18) ---
-            {"name": "Aleja9_Północ", "pos": (18.0, 10.0), "prob": 0.4},
-            {"name": "Aleja9_Środek", "pos": (18.0, 6.0), "prob": 0.25},
-            {"name": "Aleja9_Południe", "pos": (18.0, 8.0), "prob": 0.3},
-            {"name": "Aleja9_Południe", "pos": (18.0, 4.5), "prob": 0.25},
-            {"name": "Aleja9_Południe", "pos": (18.0, 11.0), "prob": 0.5},
+    # --- ALEJA 9 (X ≈ 18) - Np. Nabiał/Mleko (BARDZO POPULARNE - Hotspot) ---
+    {"name": "A9_Jogurty",          "pos": (18.0, 2.0), "prob": 0.18},
+    {"name": "A9_Sery",             "pos": (18.0, 4.5), "prob": 0.22},
+    {"name": "A9_Mleko_Środek",     "pos": (18.0, 7.0), "prob": 0.40}, # Bardzo duża szansa (Mleko)
+    {"name": "A9_Jajka",            "pos": (18.0, 9.5), "prob": 0.25},
+    {"name": "A9_Masło_Szczyt",     "pos": (18.0, 11.5), "prob": 0.30},
 
-            # --- ŚCIANA POŁUDNIOWA (PRZY MIĘSIE) ---
-            {"name": "Mięso1", "pos": (3.0, 1.25), "prob": 0.2},
-            {"name": "Mięso2", "pos": (6.0, 1.25), "prob": 0.2},
-            {"name": "Mięso3", "pos": (9.0, 1.25), "prob": 0.2},
-            {"name": "Mięso4", "pos": (12.0, 1.25), "prob": 0.2},
-            {"name": "Mięso5", "pos": (15.0, 1.25), "prob": 0.2},
-            {"name": "Mięso6", "pos": (18.0, 1.25), "prob": 0.2},
+    # --- ŚCIANA POŁUDNIOWA - Mięso/Wędliny/Lada ---
+    {"name": "Lada_Mięsna_1",       "pos": (3.0, 1.25), "prob": 0.12},
+    {"name": "Lada_Mięsna_2",       "pos": (5.0, 1.25), "prob": 0.10},
+    {"name": "Lada_Sery_Waga",      "pos": (8.0, 1.25), "prob": 0.15},
+    {"name": "Lada_Ryby",           "pos": (11.0, 1.25), "prob": 0.08},
+    {"name": "Lodówka_Mrożonki_1",  "pos": (14.0, 1.25), "prob": 0.18},
+    {"name": "Lodówka_Mrożonki_2",  "pos": (17.0, 1.25), "prob": 0.18},
 
-
-            {"name": "Mięso6", "pos": (15.0, 13.25), "prob": 0.7},
-        ]
+    # --- alkohole
+    {"name": "ALKOHOLE",       "pos": (15.0, 13.25), "prob": 0.25},
+]
     }
 ,
 
