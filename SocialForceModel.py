@@ -85,9 +85,7 @@ class SocialForceModel:
 
         return total_force
 
-    # -------------------
     # Model Components:
-    # -------------------
 
     def _force_to_goal(self, agent):
         """
@@ -126,12 +124,10 @@ class SocialForceModel:
             if other is agent:
                 continue  # Skip self
 
-            # --- DODANA LINIA ---
             # Ignoruj agentów, którzy nie są aktywni (czekają na spawn lub wyszli)
             # To jest kluczowe, aby zapobiec "eksplozji" sił w strefie spawnu.
             if not other.active:
                 continue
-            # --- KONIEC DODANEJ LINII ---
 
             # Calculate distance and direction to other agent
             d_vec = agent.position - other.position

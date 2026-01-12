@@ -1,0 +1,2 @@
+agent_id,spawn_time,activated_at,exit_time,travel_time,distance,mean_speed,idle_time,queue_time,time_street,time_vestibule,time_store,time_queue
+2018233786656,0.0,0.05,,,0.0,0.7801107699969392,0.05,0.0,1.800000000000001,0.1,0.0,0.0

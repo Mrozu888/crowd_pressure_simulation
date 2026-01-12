@@ -27,6 +27,19 @@ class Simulation:
 
         # Timer ile zostało do kolejnego spawnu
         self.time_until_next_spawn = 0.0
+    
+    def _pallet_lines(self):
+        lines = []
+        for p in self.pallets:
+            x, y = p["pos"]
+            w, h = p["size"]
+            lines.extend([
+                ((x, y), (x + w, y)),
+                ((x + w, y), (x + w, y + h)),
+                ((x + w, y + h), (x, y + h)),
+                ((x, y + h), (x, y)),
+            ])
+        return lines
 
     def update(self, on_before_remove=None):
         """
@@ -66,7 +79,7 @@ class Simulation:
             force = self.env.model.compute_force(
                 agent,
                 self.env.agents,
-                self.env.walls + self.env.shelves,
+                self.env.walls + self.env.shelves + self.env._pallet_rects_to_lines(),
             )
             agent.update(force, self.dt)
 
@@ -90,3 +103,4 @@ class Simulation:
 
         # POSUNIĘCIE CZASU 
         self.current_time += self.dt
+
