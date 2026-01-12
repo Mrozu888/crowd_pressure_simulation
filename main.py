@@ -1,7 +1,7 @@
 import os
 import pygame
 
-from Config2 import CONFIG
+from Config3 import CONFIG
 from Environment import Environment
 from Simulation import Simulation
 from Visualization import Visualization

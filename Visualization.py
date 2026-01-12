@@ -121,8 +121,8 @@ class Visualization:
 
     def _draw_legend(self):
         """
-        Rysuje legendę na podstawie environment['shelves_type'].
-        Każdy wpis: kolor + nazwa działu.
+        Rysuje legendę na podstawie environment['shelves_type'],
+        
         """
         env_conf = self.env.config.get("environment", {})
         shelves = env_conf.get("shelves_type", [])
@@ -132,15 +132,19 @@ class Visualization:
 
         font = pygame.font.SysFont("Arial", 14)
 
+        # unikalne nazwy z zachowaniem kolejności
+        legend_items = {}
+        for shelf in shelves:
+            name = shelf.get("name", "UNKNOWN")
+            if name not in legend_items:
+                legend_items[name] = shelf.get("color", (180, 180, 180))
+
         # lewy dolny róg ekranu
         x0 = 10
         y0 = self.scene_height + self.offset_y - 20
         dy = 18
 
-        for i, shelf in enumerate(shelves):
-            name = shelf.get("name", "UNKNOWN")
-            color = shelf.get("color", (180, 180, 180))
-
+        for i, (name, color) in enumerate(legend_items.items()):
             y = y0 - i * dy
 
             # kolorowy kwadrat
@@ -153,6 +157,7 @@ class Visualization:
             # tekst
             text = font.render(name, True, (0, 0, 0))
             self.screen.blit(text, (x0 + 20, y - 2))
+
 
     def draw(self, flip: bool = True):
         self.screen.fill(self.BG_COLOR)
