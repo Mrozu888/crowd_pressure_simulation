@@ -27,6 +27,7 @@ class Environment:
             self.walls
             + self.shelves
             + self._cashier_rects_to_lines()
+            + self._pallet_rects_to_lines()
         )
 
         self.grid_map = GridMap(
@@ -175,3 +176,17 @@ class Environment:
                 vn = np.dot(agent.velocity, n)
                 if vn < 0:
                     agent.velocity -= vn * n
+
+    def _pallet_rects_to_lines(self):
+        segments = []
+        for pal in self.pallets:
+            x, y = pal["pos"]
+            w, h = pal["size"]
+
+            segments.extend([
+                ((x,     y),     (x + w, y)),
+                ((x + w, y),     (x + w, y + h)),
+                ((x + w, y + h), (x,     y + h)),
+                ((x,     y + h), (x,     y)),
+            ])
+        return segments

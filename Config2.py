@@ -20,7 +20,7 @@ CONFIG = {
         "doors": [
             ((0, 13), (0, 14.5)),
         ],
-        # półki (bez zmian)
+        # Twoje półki (bez zmian)
         "shelves": [
             ((14.75, 12), (14.75, 14.85)),
             ((15, 12), (15, 14.85)),
@@ -74,40 +74,7 @@ CONFIG = {
             ((16.25, 2), (17.25, 2)),
             ((16, 12), (20, 12)),
         ],
-        "pallets": [
-            {
-        "pos": (5.62, 4.0),  
-        "size": (0.7, 1.2) #paleta między 2 i 3 półką
-        }, 
-            {
-        "pos": (7.62, 4.0),  
-        "size": (0.7, 1.2) #paleta między 3 i 4 półką
-        }, 
-            {
-        "pos": (9.62, 4.0),  
-        "size": (0.7, 1.2) #paleta między 4 i 5 półką
-        }, 
-            {
-        "pos": (11.62, 4.0),  
-        "size": (0.7, 1.2) #paleta między 5 i 6 półką
-        }, 
-                {
-        "pos": (13.62, 4.0),  
-        "size": (0.7, 1.2) #paleta między 6 i 7 półką
-        },      #(x, y)
-         {
-        "pos": (15.62, 4.0),  
-        "size": (0.7, 1.2) #paleta między 7 i 8 półką
-        }, 
-        {
-        "pos": (16.25, 1.2),  
-        "size": (1, 0.85) #paleta góra prawo (przy mleku)   
-        },
-        {
-        "pos": (1.35, 8),  #paleta lewo (przy owocach)
-        "size": (0.9, 1.2)   
-        },
-        ],
+        "pallets": [],
          "cash_registers": [
         {"pos": (5.5, 12), "size": (0.6, 1.5)},
         {"pos": (7, 12), "size": (0.6, 1.5)},
@@ -127,26 +94,25 @@ CONFIG = {
         {"pos": (14, 14.25), "size": (0.6, 0.6)},
     ],
         "cash_payment": [
-            # (5.3, 13),
-            # (6.8, 13),
-            # (8.3, 13),
+            (5.3, 13),
+            (6.8, 13),
+            (8.3, 13),
             # ###
-            (10, 12.3),
-            (10, 13.0),
-            (11.1, 12.3),
-            (11.1, 13.0),
+            (10, 12.75),
+            (10, 13.4),
+            (11.1, 12.75),
+            (11.1, 13.4),
             ###
             # (10.1, 14.25),
             # (11, 14.25),
-            #(12.8, 14.25),
             ###
-            (12.75, 12.3),
-            (12.75, 13.0),
+            (12.75, 12.7),
+            (12.75, 13.4),
             ##
             (13.85, 12.35),
             (13.85, 13.1),
-            # (13.85, 13.8),
-            # (13.85, 14.6),
+            (13.85, 13.8),
+            (13.85, 14.6),
         ],
 
 
@@ -159,8 +125,8 @@ CONFIG = {
 #         B_w (float): Range of agent-wall repulsion force
 #         desired_speed (float): Preferred movement speed for agents
 #         relax_time (float): Characteristic reaction time for velocity adjustments
-        "A": 1.6,
-        "B": 0.5,
+        "A": 1.5,
+        "B": 0.4,
         "A_w": 10.0,
         "B_w": 0.08,
         "desired_speed": 1.2,
@@ -168,13 +134,13 @@ CONFIG = {
     },
 
     "agent_generation": {
-        "spawn_rate": 0.3,
+        "spawn_rate": 0.33,
         # "n_agents": 20,
         # "max_spawn_time": 30.0,
 
         # Stałe punkty infrastruktury
         "spawn_point": (-1.5, 14.0),     # Punkt startu poza sklepem
-        "entrance_points": [(0.3, 13.75),(1.7, 12.5)],   # Punkt zaraz po wejściu
+        "entrance_points": [(1.7, 12.5)],   # Punkt zaraz po wejściu
         #"cashier_point": (13.5, 13.5),   # Punkt przy kasie
         #"exit_point": (10, 14.0),       # Punkt wyjścia
         "exit_sequence": [
