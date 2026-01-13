@@ -196,7 +196,7 @@ class QueueManager:
         cashier = self.cashiers[cashier_idx]
         service_point = cashier["service_point"]
 
-        service_time = random.uniform(3.0, 7.0)
+        service_time = random.uniform(6.0, 10.0)
         cashier["agent"] = agent
         cashier["service_time"] = service_time
 
