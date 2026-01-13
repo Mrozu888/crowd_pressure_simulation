@@ -1,4 +1,3 @@
-import os
 import pygame
 
 from Config3 import CONFIG
@@ -6,36 +5,7 @@ from Environment import Environment
 from Simulation import Simulation
 from Visualization import Visualization
 
-from stats import StatsGeometry, StatsManager, StatsWriter, RealDataSeries, StatsHUD
-
-
-def _load_real_data_from_config():
-    rd_conf = CONFIG.get("real_data", {}) if isinstance(CONFIG, dict) else {}
-    if not rd_conf or not rd_conf.get("enabled", False):
-        return None
-
-    csv_path = rd_conf.get("csv_path", "")
-    if not csv_path:
-        return None
-    if not os.path.isfile(csv_path):
-        return None
-
-    time_col = rd_conf.get("time_col", "time_s")
-    column_map = rd_conf.get(
-        "column_map",
-        {
-            "queue_len": "queue_len",
-            "entries_per_min": "entries_per_min",
-            "exits_per_min": "exits_per_min",
-            "inside": "inside",
-            "density_store": "density_store",
-        },
-    )
-
-    try:
-        return RealDataSeries.load_csv(csv_path, time_col=time_col, column_map=column_map)
-    except Exception:
-        return None
+from stats import StatsGeometry, StatsManager, StatsWriter, StatsHUD
 
 
 def main():
@@ -55,9 +25,7 @@ def main():
     writer = StatsWriter()
     geom = StatsGeometry.from_environment(env)
     stats = StatsManager(geom, writer)
-
-    real_data = _load_real_data_from_config()
-    hud = StatsHUD(font=font, small_font=small_font, real_data=real_data)
+    hud = StatsHUD(font=font, small_font=small_font)
 
     running = True
     paused = False
@@ -75,7 +43,7 @@ def main():
                         paused = not paused
 
                     # HUD toggles
-                    elif event.key in (pygame.K_F1, pygame.K_g, pygame.K_h, pygame.K_r):
+                    elif event.key in (pygame.K_F1, pygame.K_g, pygame.K_h):
                         hud.handle_key(event.key)
 
                     # Speed control
@@ -93,7 +61,7 @@ def main():
             vis.draw(flip=False)
 
             # HUD overlays (stats + charts + hotspots)
-            hud.draw(vis.screen, vis, stats, sim.current_time)
+            hud.draw(vis.screen, stats, vis=vis)
 
             # FPS label
             fps_text = f"Speed (FPS): {target_fps}"
