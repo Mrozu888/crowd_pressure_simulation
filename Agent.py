@@ -3,7 +3,7 @@ import numpy as np
 
 class Agent:
 
-    def __init__(self, position, goal=None, desired_speed=1.3, radius=0.2, path=None, spawn_time=0.0):
+    def __init__(self, position, goal=None, desired_speed=1.3, radius=0.15, path=None, spawn_time=0.0):
 
         self.position = np.array(position, dtype=np.float32)
         self.velocity = np.zeros(2)
@@ -38,7 +38,7 @@ class Agent:
         norm = np.linalg.norm(dir_vec)
         return dir_vec / norm if norm > 1e-6 else np.zeros(2)
 
-    def advance_path(self, threshold=0.4):  # Zwiększyłem lekko threshold
+    def advance_path(self, threshold=0.2):  # Zwiększyłem lekko threshold
         """
         Check if agent reached current waypoint and move to next one.
         Handles waiting time.
