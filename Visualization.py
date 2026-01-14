@@ -229,7 +229,7 @@ class Visualization:
         pts = self.env.config.get("environment", {}).get("cash_payment", [])
         for pt in pts:
             x, y = self._transform_coords(pt)
-            pygame.draw.circle(self.screen, (0, 0, 0), (x, y), 4)
+            pygame.draw.circle(self.screen, (255, 255, 255),  (x, y), 4)
     def _draw_colored_shelves(self):
         env_conf = self.env.config.get("environment", {})
         shelves = env_conf.get("shelves_type", [])
