@@ -254,7 +254,14 @@ class StatsHUD:
             f"density={density:.3f}" + (f" shop_med={med_shop_real_min:.1f}min" if med_shop_real_min is not None else ""),
             "F1 HUD   G graphs   H heatmap",
         ]
-        self._draw_text_block(screen, lines, 10, 40)
+        # Put the HUD text block in the right sidebar (so it does not cover the shop).
+        if vis is not None and hasattr(vis, "scene_width") and hasattr(vis, "offset_x"):
+            x_txt = int(vis.offset_x + vis.scene_width + getattr(vis, "sidebar_gap", 20))
+            y_txt = 10
+        else:
+            x_txt = 10
+            y_txt = 40
+        self._draw_text_block(screen, lines, x_txt, y_txt)
 
         if self.toggles.show_heatmap and vis is not None:
             self._draw_heatmap_overlay(screen, stats, vis)
@@ -263,11 +270,12 @@ class StatsHUD:
             return
 
         # graphs layout
-        w = 330
-        h = 105
+        w = 500
+        h = 200
         gap = 10
         x0 = screen.get_width() - w - 10
-        y0 = 40
+        # Keep charts in the far-right area.
+        y0 = 170
 
         # scaled time axis (real seconds)
         t_hist_sim = list(getattr(stats, "t_hist", []))

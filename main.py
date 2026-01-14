@@ -1,6 +1,6 @@
 import pygame
 
-from Config2 import CONFIG
+from Config5 import CONFIG
 from Environment import Environment
 from Simulation import Simulation
 from Visualization import Visualization
@@ -17,9 +17,18 @@ def main():
 
     clock = pygame.time.Clock()
 
+    # Fullscreen window (scaled). The shop itself keeps its layout; the right
+    # side is used for graphs/legend.
+    info = pygame.display.Info()
+    # Some drivers cannot use (0,0) with SCALED; use explicit current resolution.
+    try:
+        screen = pygame.display.set_mode((info.current_w, info.current_h), pygame.FULLSCREEN | pygame.SCALED)
+    except pygame.error:
+        screen = pygame.display.set_mode((info.current_w, info.current_h), pygame.FULLSCREEN)
+
     env = Environment(CONFIG)
     sim = Simulation(env, CONFIG)
-    vis = Visualization(env)
+    vis = Visualization(env, screen=screen)
 
     # Stats (CSV + heatmap + live HUD)
     writer = StatsWriter()
