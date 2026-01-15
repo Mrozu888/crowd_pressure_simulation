@@ -1,4 +1,5 @@
 import pygame
+import numpy as np
 
 
 class Visualization:
@@ -12,6 +13,9 @@ class Visualization:
     AGENT_CROWD_RED = (220, 50, 50)
 
     CASH_REGISTER_COLOR = (255, 100, 0)
+    CASH_WORKING_FILL = CASH_REGISTER_COLOR
+    CASH_OFF_FILL = (220, 60, 60)
+    PALLET_FILL = (170, 120, 60)
     SHELF_COLOR = (120, 120, 120)
     PALLET_COLOR = (139, 69, 19)
 
@@ -20,22 +24,54 @@ class Visualization:
     CURRENT_TARGET_COLOR = (0, 255, 0)
     WAITING_COLOR = (255, 0, 0)
 
-    def __init__(self, env):
+    def __init__(self, env, screen: pygame.Surface | None = None):
         self.env = env
         self.scale = env.scale
 
         self.scene_width = int(env.width * self.scale)
         self.scene_height = int(env.height * self.scale)
 
-        self.window_width = 1200
-        self.window_height = 800
+        # Create / reuse pygame screen
+        if screen is None:
+            self.window_width = 1200
+            self.window_height = 800
+            self.screen = pygame.display.set_mode((self.window_width, self.window_height), pygame.RESIZABLE | pygame.SCALED)
+        else:
+            self.screen = screen
+            self.window_width, self.window_height = self.screen.get_size()
+        # fonts (emoji-friendly)
+        pygame.font.init()
+        self.legend_font = pygame.font.SysFont("Segoe UI Emoji", 12)
+        self.legend_font_small = pygame.font.SysFont("Segoe UI Emoji", 10)
+        # fallback if emoji font unavailable
+        if self.legend_font is None:
+            self.legend_font = pygame.font.SysFont("Arial", 14)
+        if self.legend_font_small is None:
+            self.legend_font_small = pygame.font.SysFont("Arial", 12)
 
-        self.screen = pygame.display.set_mode((self.window_width, self.window_height))
         pygame.display.set_caption("Social Force Model Simulation - Sklep")
 
-        self.offset_x = (self.window_width - self.scene_width) // 2
-        self.offset_y = (self.window_height - self.scene_height) // 2
+        # Keep the shop layout unchanged, but pin it to the left side so that
+        # the right side stays free for graphs/legend (no overlap).
+        self.sidebar_gap = 20
+        # Reserve space on the right for HUD graphs (StatsHUD uses ~330px width).
+        self.right_reserved_w = 370
+
+        # Layout offsets are computed dynamically each frame to keep the shop centered.
+        self.offset_x = 10
+        self.offset_y = 10
+
+        # Remember legend rect for layout/debug
+        self.legend_rect = None
     
+    
+    def _update_layout_offsets(self) -> None:
+        # Center the shop in the available area (screen minus right HUD panel).
+        self.window_width, self.window_height = self.screen.get_size()
+        avail_w = max(200, self.window_width - self.right_reserved_w - self.sidebar_gap)
+        self.offset_x = max(10, (avail_w - self.scene_width) // 2)
+        self.offset_y = max(10, (self.window_height - self.scene_height) // 2)
+
     def _transform_coords(self, sim_point):
         sim_x, sim_y = sim_point
         screen_x = int(sim_x * self.scale) + self.offset_x
@@ -69,6 +105,55 @@ class Visualization:
             screen_h = int(size[1] * self.scale)
             obj_rect = pygame.Rect(screen_pos[0], screen_pos[1], screen_w, screen_h)
             pygame.draw.rect(self.screen, color, obj_rect)
+
+    def _draw_cash_registers(self, cash_registers):
+        """Draw cash registers with status:
+        - orange: working (has a nearby cash_payment point)
+        - red with X: not working
+        """
+        env_conf = self.env.config.get("environment", {})
+        pay_pts = env_conf.get("cash_payment", [])
+        pay_pts_np = [np.array(p, dtype=np.float32) for p in pay_pts]
+
+        def is_working(rect_center: np.ndarray) -> bool:
+            # working if any cash_payment point is close enough to its center
+            if not pay_pts_np:
+                return False
+            for p in pay_pts_np:
+                if float(np.linalg.norm(p - rect_center)) <= 0.75:
+                    return True
+            return False
+
+        for obj in cash_registers:
+            pos = obj["pos"]
+            size = obj["size"]
+
+            # world center
+            cx = float(pos[0] + size[0] * 0.5)
+            cy = float(pos[1] + size[1] * 0.5)
+            center = np.array([cx, cy], dtype=np.float32)
+
+            working = is_working(center)
+
+            base_col = self.CASH_REGISTER_COLOR if working else (210, 60, 60)
+            outline = (180, 85, 0) if working else (140, 30, 30)
+
+            screen_pos = self._transform_coords(pos)
+            screen_w = int(size[0] * self.scale)
+            screen_h = int(size[1] * self.scale)
+
+            rect = pygame.Rect(screen_pos[0], screen_pos[1], screen_w, screen_h)
+            # nice rounded box
+            pygame.draw.rect(self.screen, base_col, rect, border_radius=5)
+            pygame.draw.rect(self.screen, outline, rect, 2, border_radius=5)
+
+            if not working:
+                # draw X inside
+                x1, y1 = rect.left + 4, rect.top + 4
+                x2, y2 = rect.right - 4, rect.bottom - 4
+                pygame.draw.line(self.screen, (255, 235, 235), (x1, y1), (x2, y2), 3)
+                pygame.draw.line(self.screen, (255, 235, 235), (x1, y2), (x2, y1), 3)
+
 
     def _draw_paths(self, agents):
         for agent in agents:
@@ -248,47 +333,122 @@ class Visualization:
 
             pygame.draw.rect(self.screen, color, rect)
 
+    
     def _draw_legend(self):
-        """
-        Rysuje legendę na podstawie environment['shelves_type'],
-        
+        """Draw legend (bottom-left):
+        - shelves_type colors + names (names may include emoji)
+        - agent color section
+        - cashiers: working (orange) / not working (red with X)
+        - pallet
         """
         env_conf = self.env.config.get("environment", {})
         shelves = env_conf.get("shelves_type", [])
 
-        if not shelves:
-            return
+        font = getattr(self, "legend_font", pygame.font.SysFont("Segoe UI Emoji", 14))
+        small = getattr(self, "legend_font_small", pygame.font.SysFont("Segoe UI Emoji", 12))
+        if font is None:
+            font = pygame.font.SysFont("Arial", 14)
+        if small is None:
+            small = pygame.font.SysFont("Arial", 12)
 
-        font = pygame.font.SysFont("Arial", 14)
-
-        # unikalne nazwy z zachowaniem kolejności
-        legend_items = {}
+        # Build shelves list: keep order but unique names
+        legend_items = []
+        seen = set()
         for shelf in shelves:
-            name = shelf.get("name", "UNKNOWN")
-            if name not in legend_items:
-                legend_items[name] = shelf.get("color", (180, 180, 180))
+            name = str(shelf.get("name", "UNKNOWN"))
+            if name in seen:
+                continue
+            seen.add(name)
+            color = shelf.get("color", (180, 180, 180))
+            legend_items.append((name, color))
 
-        # lewy dolny róg ekranu
-        x0 = 10
-        y0 = self.scene_height + self.offset_y - 20
-        dy = 18
+        # Sections
+        agent_lines = [
+            ("Klient", self.AGENT_BLUE),
+            ("Kolejka / kasa", self.AGENT_QUEUE_GREEN),
+            ("Tłok (2 osoby)", self.AGENT_CROWD_YELLOW),
+            ("Zator (3+)", self.AGENT_CROWD_RED),
+        ]
+        misc_lines = [
+            ("Kasa (działa)", self.CASH_WORKING_FILL),
+            ("Kasa (nie działa)", self.CASH_OFF_FILL),
+            ("Paleta", self.PALLET_FILL),
+        ]
 
-        for i, (name, color) in enumerate(legend_items.items()):
-            y = y0 - i * dy
+        # Measure width/height dynamically
+        padding = 10
+        line_h = 14
+        section_gap = 6
+        swatch = 10
+        swatch_gap = 8
 
-            # kolorowy kwadrat
-            pygame.draw.rect(
-                self.screen,
-                color,
-                pygame.Rect(x0, y, 14, 14)
-            )
+        def measure_text(s: str) -> int:
+            return font.size(s)[0]
 
-            # tekst
-            text = font.render(name, True, (0, 0, 0))
-            self.screen.blit(text, (x0 + 20, y - 2))
+        max_w = 0
+        # shelves lines include emoji already
+        for name, _ in legend_items:
+            max_w = max(max_w, measure_text(name))
+        for name, _ in agent_lines:
+            max_w = max(max_w, measure_text(name))
+        for name, _ in misc_lines:
+            max_w = max(max_w, measure_text(name))
 
+        card_w = padding * 2 + swatch + swatch_gap + max_w
+        # total lines
+        n_lines = len(misc_lines) + len(agent_lines) + len(legend_items)
+        card_h = padding * 2 + n_lines * line_h + section_gap * 2
+
+        # Position: bottom-left
+        x0 = self.screen.get_width() - card_w - 20
+        y0 = self.screen.get_height() - card_h - 20
+        if y0 < 20:
+            y0 = 20
+
+        card = pygame.Surface((card_w, card_h), pygame.SRCALPHA)
+        card.fill((255, 255, 255, 230))
+        pygame.draw.rect(card, (0, 0, 0, 60), card.get_rect(), 1, border_radius=12)
+
+        y = padding
+
+        # --- misc first (cashiers + pallet) ---
+        for text, col in misc_lines:
+            pygame.draw.rect(card, col, (padding, y + 3, swatch, swatch), border_radius=2)
+            # draw red X for "not working cashier"
+            if "nie działa" in text:
+                x1 = padding
+                y1 = y + 3
+                x2 = padding + swatch
+                y2 = y + 3 + swatch
+                pygame.draw.line(card, (255, 255, 255), (x1, y1), (x2, y2), 2)
+                pygame.draw.line(card, (255, 255, 255), (x2, y1), (x1, y2), 2)
+
+            label = font.render(text, True, (10, 10, 10))
+            card.blit(label, (padding + swatch + swatch_gap, y))
+            y += line_h
+
+        y += section_gap
+
+        # --- agents section ---
+        for text, col in agent_lines:
+            pygame.draw.rect(card, col, (padding, y + 3, swatch, swatch), border_radius=2)
+            label = font.render(text, True, (10, 10, 10))
+            card.blit(label, (padding + swatch + swatch_gap, y))
+            y += line_h
+
+        y += section_gap
+
+        # --- shelves_type section ---
+        for name, col in legend_items:
+            pygame.draw.rect(card, col, (padding, y + 3, swatch, swatch), border_radius=2)
+            label = font.render(name, True, (10, 10, 10))
+            card.blit(label, (padding + swatch + swatch_gap, y))
+            y += line_h
+
+        self.screen.blit(card, (x0, y0))
 
     def draw(self, flip: bool = True):
+        self._update_layout_offsets()
         self.screen.fill(self.BG_COLOR)
         self._draw_cash_payment()
         self._draw_colored_shelves()
@@ -301,7 +461,7 @@ class Visualization:
         if hasattr(self.env, "pallets"):
             self._draw_rect_objects(self.env.pallets, self.PALLET_COLOR)
         if hasattr(self.env, "cash_registers"):
-            self._draw_rect_objects(self.env.cash_registers, self.CASH_REGISTER_COLOR)
+            self._draw_cash_registers(self.env.cash_registers)
 
         if hasattr(self.env, "agents"):
             # self._draw_paths(self.env.agents)
